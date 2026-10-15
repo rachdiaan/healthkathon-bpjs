@@ -43,15 +43,16 @@ Aturan untuk agent:
     - [x] 4. Sebagai `payray_app`, `UPDATE audit.event` gagal dengan permission denied.
     - [x] 5. Tidak ada `DROP`/`TRUNCATE` di `db/migrations/`.
   - Catatan: Keputusan: username pakai `text` + unique index `lower(username)` (tanpa citext, lokal = Neon). ID BU bigint + kolom `code` untuk kode teks repo; perbedaan dengan `db/schema.sql` dicatat di 001. `rp_band` ditambah di `core.risk_score` untuk mode KILL-5. Postgres Docker di `127.0.0.1:54329` (5432/5433 dipakai Postgres lokal, 55432 dipakai container lain). Tes: `tests/test_db_permissions.py`, 8 passed.
-- [!] t4 · CI 7 stage + grep guardrail (M)
+- [x] t4 · CI 7 stage + grep guardrail (M)
   - Butuh: t3
   - Kerjakan: Buat `.github/workflows/ci.yml` dengan stage berurutan: (1) Lint: `ruff check`, `node --check` untuk `web/**/*.js`, grep BR-1 (`pelanggar|curang|fraud`) di `web/`, grep GR-14 (`innerHTML|insertAdjacentHTML`) di `web/`, grep GR-9 (`pytest.mark.skip|xfail`) di `tests/`, grep GR-10 (`DROP|TRUNCATE`) di `db/migrations/`; (2) Type check `mypy api engine scripts`; (3) `pytest` ke service container `postgres:16` DB `payray_test` setelah `migrate.py`; (4) `pip-audit` gagal pada high/critical; (5) gitleaks; (6) `bandit -r api engine scripts`; (7) `docker build` + `python scripts/build_static.py --dry-run` (stub sementara sampai t24). Tambah cek diff `requirements.txt` yang gagal tanpa label `deps-approved` (GR-7). Jalankan sekali commit uji berisi key dummy di branch uji untuk SEC-14.
   - Selesai jika:
     - [x] 1. Workflow punya 7 job bernama sesuai urutan SDLC dengan `needs` berantai.
-    - [ ] 2. CI hijau di `main`.
+    - [x] 2. CI hijau di `main`.
     - [x] 3. Commit uji berisi pola key dummy membuat stage gitleaks gagal (SEC-14).
     - [x] 4. PR yang mengubah `requirements.txt` tanpa label `deps-approved` gagal.
   - Catatan: PR https://github.com/rachdiaan/healthkathon-bpjs/pull/1 (head karuqii9704:feat/t4-ci, satu commit squash): 7 job CI hijau + GitGuardian lulus. Poin 3 (SEC-14) terbukti di fork: run 38495683953 gagal di gitleaks pada key dummy; poin 4 (GR-7): run 38495062256 gagal tanpa label `deps-approved`. PR uji di fork ditutup. GitGuardian sempat menandai placeholder kredensial (`CHANGE_ME`, `postgres:postgres`); diganti autentikasi `trust`/tanpa password, history di-squash. Terbuka poin 2 saja: "CI hijau di `main`" menunggu merge, yang butuh 1 review anggota lain (PRD §20); merge tidak saya lakukan.
+  - Catatan (update): PR #1 di-squash-merge ke `main` (74bf815) atas keputusan pemilik akun; CI 7 job hijau di `main` (run 38675642911). Pages v1 tetap hidup (HTTP 200).
 - [x] t5 · Design skill, MASTER.md, token CSS, font self-host (M)
   - Butuh: t1
   - Kerjakan: Jalankan `npx ui-ux-pro-max-cli init --ai claude` dan `npx skills add Leonxlnx/taste-skill`. Tulis `design-system/payray/MASTER.md` dari §12 (kategori, dial, layout 6 layar, anti-pattern, pre-delivery checklist); semua nilai token diambil dari `plankit/tokens.json`, atau dari blok json §12 kalau file itu belum ada. Buat `web/tokens.css` (CSS custom properties dari token yang sama), `web/base.css` (reset, fokus outline 2 px primary offset 2 px, `prefers-reduced-motion` mematikan transisi). Self-host Montserrat + Source Sans 3 woff2 subset latin di `web/fonts/` (total ≤ 200 KB). Verifikasi kontras pasangan text/bg, muted/bg, onPrimary/primary, teks chip.
