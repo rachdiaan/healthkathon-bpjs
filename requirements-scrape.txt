@@ -1,0 +1,3 @@
+# Opsional, hanya untuk scripts/scrape_bpjs_portal.py (tidak dipakai API)
+tableauscraper>=0.1.29
+beautifulsoup4>=4.12

@@ -1,0 +1,142 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  lint:
+    name: 1-lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-python@v5
+        with: { python-version: "${{ env.PYTHON_VERSION }}" }
+      - run: pip install ruff==0.17.0
+      - run: ruff check api scripts tests
+      - name: node --check web/**/*.js
+        run: find web -name '*.js' -print0 | xargs -0 -r -n1 node --check
+      - name: BR-1 bahasa menuduh di web/
+        run: "! grep -rniE 'pelanggar|curang|fraud' web/"
+      - name: GR-14 innerHTML di web/
+        run: "! grep -rnE 'innerHTML|insertAdjacentHTML' web/"
+      - name: GR-9 skip/xfail di tests/
+        run: "! grep -rnE 'pytest.mark.skip|xfail' tests/"
+      - name: FR-37 artefak model cocok dengan ml/FROZEN.txt (GR-11)
+        run: grep -v '^#' ml/FROZEN.txt | sha256sum -c -
+      - name: GR-10 migrasi destruktif
+        run: "! grep -rniwE 'DROP|TRUNCATE' db/migrations/"
+      - name: GR-7 requirements.txt butuh label deps-approved
+        if: github.event_name == 'pull_request'
+        env:
+          LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git fetch --depth=1 origin "$BASE"
+          if git diff --name-only "$BASE" HEAD | grep -qx 'requirements.txt'; then
+            case ",$LABELS," in *,deps-approved,*) echo "deps-approved ada";; *) echo "requirements.txt berubah tanpa label deps-approved (GR-7)"; exit 1;; esac
+          fi
+  typecheck:
+    name: 2-typecheck
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "${{ env.PYTHON_VERSION }}", cache: pip }
+      - run: pip install -r requirements.txt
+      - run: mypy api engine scripts
+
+  test:
+    name: 3-test
+    needs: typecheck
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust   # service container buangan, hanya dijangkau job ini
+          POSTGRES_DB: payray_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: DATABASE_URL untuk service container
+        run: echo "DATABASE_URL=postgresql://postgres@127.0.0.1:5432/payray_test" >> "$GITHUB_ENV"
+      - uses: actions/setup-python@v5
+        with: { python-version: "${{ env.PYTHON_VERSION }}", cache: pip }
+      - run: pip install -r requirements.txt
+      - run: python scripts/migrate.py
+      - run: pytest -q
+
+  audit:
+    name: 4-dependency-audit
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "${{ env.PYTHON_VERSION }}" }
+      - run: pip install pip-audit==2.10.1
+      - run: pip-audit -r requirements.txt --vulnerability-service osv
+
+  secrets:
+    name: 5-secret-scan
+    needs: audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  sast:
+    name: 6-sast
+    needs: secrets
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "${{ env.PYTHON_VERSION }}" }
+      - run: pip install bandit==1.9.4
+      - run: bandit -q -r api scripts -x tests -ll
+
+  build:
+    name: 7-build
+    needs: sast
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: payray_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "${{ env.PYTHON_VERSION }}", cache: pip }
+      - run: docker build -t payray:ci .
+      - run: pip install -r requirements.txt
+      - run: python scripts/migrate.py
+        env:
+          DATABASE_URL: postgresql://postgres@127.0.0.1:5432/payray_test
+      - name: build_static dry-run terhadap DB test
+        run: python scripts/build_static.py --dry-run
+        env:
+          DATABASE_URL: postgresql://postgres@127.0.0.1:5432/payray_test

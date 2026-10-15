@@ -6,9 +6,17 @@ import numpy as np
 import pandas as pd
 from sklearn.ensemble import IsolationForest
 
-from generator.calculator import estimasi_iuran_tak_tertagih
+from generator.calculator import estimasi_iuran_tak_tertagih as _estimasi
+
+from . import params
 
 from .rules import RULES, apply_rules
+
+
+def estimasi_iuran_tak_tertagih(upah_wajar, upah_dilaporkan, jumlah_pekerja, pekerja_pindah_pbpu=0):
+    """Rumus kalkulator dengan parameter regulasi dari engine/params.py (BR-6)."""
+    return _estimasi(upah_wajar, upah_dilaporkan, jumlah_pekerja, pekerja_pindah_pbpu=pekerja_pindah_pbpu,
+                     plafon=params.BATAS_ATAS_UPAH, tarif=params.TARIF_IURAN_PPU)
 
 ANOMALY_FEATURES = {
     "porsi_tepat_umk": "porsi upah tepat UMK",

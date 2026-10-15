@@ -1,4 +1,5 @@
-data/
+data/*
+!data/SOURCES.md
 __pycache__/
 *.pyc
 .pytest_cache/
@@ -12,3 +13,15 @@ node_modules/
 .DS_Store
 Thumbs.db
 ~$*.pptx
+# secret & data sensitif (GR-8)
+.env
+.env.*
+!.env.example
+*blind_seed*
+data_blind/
+*.dump
+*.sql.gz
+backup/
+
+# output build statis (dibangun ulang tiap deploy-pages)
+web-static/

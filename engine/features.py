@@ -103,4 +103,10 @@ def build(inp: Inputs) -> pd.DataFrame:
     f["umkm"] = f.skala_usaha.isin(["mikro", "kecil"])
     f = f.fillna({"klaster_pbpu_n": 0, "klaster_pbpu_porsi": 0, "n_pekerja": 0, "porsi_tepat_umk": 0,
                   "porsi_bawah_umk": 0, "pasangan_kenaikan": 0})
+    # FR-36: median upah relatif terhadap BU sejenis (sektor × kab/kota × skala); fallback sektor × skala.
+    fine = f.groupby(["kbli", "kode_wilayah", "skala_usaha"]).median_upah.transform("median")
+    n_fine = f.groupby(["kbli", "kode_wilayah", "skala_usaha"]).median_upah.transform("count")
+    coarse = f.groupby(["kbli", "skala_usaha"]).median_upah.transform("median")
+    f["median_upah_peer"] = fine.where(n_fine >= 8, coarse)
+    f["rasio_upah_peer"] = f.median_upah / f.median_upah_peer
     return f

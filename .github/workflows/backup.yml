@@ -1,0 +1,44 @@
+name: backup
+
+# Backup harian pg_dump (format custom) ke artefak, retensi 7 hari (§13 Backup & restore).
+on:
+  schedule:
+    - cron: "0 19 * * *"   # 02:00 WIB
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pg_dump:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install pg_dump 18 (server Neon = PG18; pg_dump menolak server yang lebih baru dari clientnya)
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update -q
+          sudo apt-get install -y -q postgresql-client-18
+          pg_dump --version
+      - name: Dump + enkripsi
+        # Repo ini publik: artefak Actions bisa diunduh pengguna GitHub mana pun. Dump berisi ground truth label
+        # dan hash password, jadi WAJIB dienkripsi (AES-256, PBKDF2) sebelum diunggah. Hanya file .enc yang diunggah.
+        env:
+          BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          if [ -z "$BACKUP_DATABASE_URL" ] || [ -z "$BACKUP_PASSPHRASE" ]; then
+            echo "Secret BACKUP_DATABASE_URL dan BACKUP_PASSPHRASE wajib diisi"; exit 1
+          fi
+          stamp="$(date -u +%Y%m%dT%H%MZ)"
+          pg_dump --format=custom --no-owner --file "payray-$stamp.dump" "$BACKUP_DATABASE_URL"
+          openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -pass env:BACKUP_PASSPHRASE             -in "payray-$stamp.dump" -out "payray-$stamp.dump.enc"
+          rm -f "payray-$stamp.dump"
+          ls -l *.enc
+      - uses: actions/upload-artifact@v4
+        with:
+          name: payray-backup
+          path: "*.dump.enc"
+          retention-days: 7
+          if-no-files-found: error

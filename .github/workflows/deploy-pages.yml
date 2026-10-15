@@ -1,0 +1,46 @@
+name: deploy-pages
+
+# FR-33: deploy snapshot statis v2 setiap batch dipublikasikan (dijalankan manual).
+# Trigger push ke main sengaja TIDAK dipakai: Pages repo ini masih melayani dashboard v1 dari branch main
+# (demo di deck slide 13). Mengubah sumber Pages ke "GitHub Actions" akan menimpa v1, jadi keputusan itu
+# ada di admin repo. Setelah admin memutuskan, tambahkan `push: branches: [main]` di sini.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install "psycopg[binary]==3.3.6"
+      - name: Build web-static (role payray_scoring, allowlist field)
+        env:
+          STATIC_DATABASE_URL: ${{ secrets.PAGES_DATABASE_URL }}
+          PAYRAY_LIVE_URL: ${{ vars.PAYRAY_LIVE_URL }}
+          PAYRAY_RP_MODE: ${{ vars.PAYRAY_RP_MODE || 'range' }}
+        run: |
+          if [ -z "$STATIC_DATABASE_URL" ]; then echo "Secret PAGES_DATABASE_URL belum diisi"; exit 1; fi
+          python scripts/build_static.py --out web-static
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: web-static }
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

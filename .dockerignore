@@ -1,0 +1,9 @@
+.venv
+.git
+data
+hasil*
+data_holdout
+dashboard
+docs/deck
+node_modules
+.env

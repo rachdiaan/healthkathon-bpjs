@@ -1,0 +1,16 @@
+# Blueprint Render (free web service). Secret diisi di dashboard Render, tidak di repo (GR-8).
+services:
+  - type: web
+    name: payray
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL        # login payray_app ke Neon (sslmode=require)
+        sync: false
+      - key: PAYRAY_NIK_KEY
+        sync: false
+      - key: PAYRAY_RP_MODE
+        value: range
+      - key: MODE
+        value: live

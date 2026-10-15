@@ -1,0 +1,9 @@
+{
+ "method": "rp_point x kuantil rasio kerugian/rp_point, BU tidak patuh set train",
+ "dataset": "train",
+ "n": 150,
+ "q_lo": 0.1,
+ "q_hi": 0.9,
+ "factor_lo": 0.5038,
+ "factor_hi": 3.2197
+}

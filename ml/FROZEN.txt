@@ -1,0 +1,4 @@
+# Artefak model dibekukan sebelum blind eval (FR-37). Jangan ubah setelah data blind dibuat (GR-11).
+# Format: sha256  path. Dicek CI job 1-lint (langkah frozen-model).
+982d5cf45bb410e680e62abf621dd33b3b93d9745878b7421b15c2ee360569e6  ml/artefak/model_payray.json
+93c0da9f602ea6e9bb4cf5c4341780cc34dcca5c5ad3c9e4fc4d07866f6ef370  ml/artefak/rp_interval.json

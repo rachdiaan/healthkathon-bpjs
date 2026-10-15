@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from engine import features, score
+from engine import features
 from generator.config import Config
 from generator.export import write_all
 from generator.inject import inject

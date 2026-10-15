@@ -1,8 +1,18 @@
-numpy>=2.0
-pandas>=2.2
-scikit-learn>=1.5
-# opsional
-psycopg[binary]>=3.2   # scripts/load_postgres.py
-pytest>=8              # tes
-tableauscraper>=0.1.29  # scripts/scrape_bpjs_portal.py
-beautifulsoup4>=4.12
+# Versi di-pin sesuai yang terpasang (TC-7). Ubah hanya dengan label PR deps-approved (GR-7).
+# API
+fastapi==0.143.0
+uvicorn==0.54.0
+psycopg[binary]==3.3.6
+psycopg-pool==3.3.3
+# engine/ + ml/
+numpy==2.5.4
+pandas==3.0.6
+scikit-learn==1.9.1
+scipy==1.18.1
+# test & kualitas
+pytest==9.1.1
+httpx==0.28.1  # dipakai fastapi.testclient
+ruff==0.17.0
+mypy==2.4.0
+pip-audit==2.10.1
+bandit==1.9.4

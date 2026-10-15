@@ -1,0 +1,363 @@
+<!-- planything project:0b2cebdd-f5d3-4cc4-adfb-559a815ba259 | managed file: keep task ids, only edit the [ ] markers and Note lines -->
+
+# Task: PayRay v2
+
+Penanda status: `[ ]` belum · `[~]` sedang dikerjakan · `[x]` selesai · `[!]` terblokir.
+
+Aturan untuk agent:
+1. Ambil task paling atas yang belum selesai dan semua "Butuh"-nya sudah `[x]`.
+2. Ganti penandanya jadi `[~]` saat mulai. Centang tiap poin "Selesai jika" (`[x]`) begitu terbukti. Task jadi `[x]` hanya kalau semua poinnya tercentang.
+3. "Keputusan terbuka": kalau belum dijawab, pakai usulannya dan tulis keputusanmu di baris "Catatan".
+4. Kalau terblokir, pakai `[!]` dan tulis alasannya di baris "Catatan".
+5. Jangan ubah id, urutan, atau menghapus task. Rencana lengkap ada di PRD.md di folder ini.
+6. Tool MCP planything (`get_next_task`, `update_task`) opsional. Kalau tidak tersedia, cukup edit file ini: planything memantaunya setiap detik.
+7. Guardrail `[GR-n]` di PRD.md berlaku untuk setiap task. Kalau sebuah task hanya bisa selesai dengan melanggarnya, tandai `[!]` dan jelaskan di "Catatan". Jangan cari jalan pintas.
+
+## Fase 1 · Fondasi
+- [x] t1 · Setup repo, guardrail agent, dan struktur folder (S)
+  - Kerjakan: Rapikan repo `healthkathon-bpjs` untuk v2: buat folder `api/`, `web/`, `web-static/`, `scripts/`, `db/migrations/`, `tests/`, `docs/`, `design-system/payray/`. Tulis `AGENTS.md` dan `CLAUDE.md` berisi GR-6 sampai GR-13 secara verbatim, plus konvensi branch `feat/<task-id>-<slug>` dan squash merge. Buat `.env.example` (DATABASE_URL, PAYRAY_NIK_KEY, PAYRAY_RP_MODE, MODE) dan `.gitignore` yang mengecualikan `.env`, file seed blind, dan dump. Tambah README section 'Struktur & cara jalan lokal'. Jangan sentuh `engine/` dan `ml/` dulu (GR-6).
+  - Selesai jika:
+    - [x] 1. `AGENTS.md` memuat teks GR-6 sampai GR-13.
+    - [x] 2. `CLAUDE.md` memuat teks GR-6 sampai GR-13.
+    - [x] 3. `.env.example` ada tanpa nilai secret asli.
+    - [x] 4. `.gitignore` mengecualikan `.env`.
+  - Catatan: CLAUDE.md lama (konteks proyek) dipertahankan, GR-6..GR-13 ditambahkan di akhir. Folder kosong diberi .gitkeep.
+- [x] t2 · Install stack Python, DB lokal + test, pin versi (M)
+  - Butuh: t1
+  - Kerjakan: Buat `requirements.txt` berisi FastAPI, Uvicorn, psycopg 3 + psycopg_pool, pytest, ruff, mypy, pip-audit, bandit, plus dependensi `engine/`/`ml/` yang sudah ada (scikit-learn, numpy, pandas); pin versi yang benar-benar terpasang (TC-7). Buat `docker-compose.yml` dengan `postgres:16` dan init script yang membuat DB `payray_dev` dan `payray_test`. Buat `api/main.py` minimal: FastAPI app, `GET /api/health` (versi + git SHA, tanpa detail DB), `StaticFiles` serve `web/` dengan `web/index.html` + `web/app.js` (ES module kosong) sebagai pendekatan UI vanilla tanpa build step. Buat `Dockerfile` dari `python:3.12-slim`. Tulis `tests/conftest.py` yang `pytest.exit` bila nama DB di `DATABASE_URL` tidak berakhiran `_test` (GR-13). Catat semua versi terpasang (Python, FastAPI, Uvicorn, psycopg, Postgres, scikit-learn) di README.
+  - Selesai jika:
+    - [x] 1. `docker compose up` menghasilkan DB `payray_dev` dan `payray_test`.
+    - [x] 2. `GET /api/health` mengembalikan 200 secara lokal.
+    - [x] 3. `pytest` dengan `DATABASE_URL` ke `payray_dev` berhenti lewat `pytest.exit` tanpa menjalankan tes.
+    - [x] 4. README mencantumkan versi persis setiap library di `requirements.txt`.
+  - Catatan: venv di `.venv/`. `httpx` ditambah karena wajib untuk `fastapi.testclient`; `scipy` ikut terpasang sebagai dependensi scikit-learn. Dependensi scraper dipindah ke `requirements-scrape.txt`. Guard conftest hanya aktif bila `DATABASE_URL` di-set (tes engine lama tetap jalan tanpa DB, 14 passed).
+- [x] t3 · Migrasi schema lengkap + role & grant (L)
+  - Butuh: t2
+  - Kerjakan: Buat `scripts/migrate.py` (forward-only, tabel `public.schema_migrations`, jalan sebagai `payray_migrator`). Migrasi `db/migrations/001_*.sql` berangkat dari `db/schema.sql`; catat perbedaan struktur repo di komentar 001. Buat schema `core`, `ops`, `label`, `audit` dan SEMUA entitas §16: `core.branch`, `core.employer`, `core.worker`, `core.wage_reference`, `core.score_batch` (partial unique running & published per branch), `core.risk_score` (UNIQUE batch_id,rank), `ops.app_user` (citext atau text+lower), `ops.session`, `ops.login_attempt`, `ops.inspection` (partial unique employer_id,period WHERE submitted; UNIQUE officer_id,idempotency_key), `label.inspection_outcome`, `label.ground_truth`, view `label.v_prevalence`, `ops.metric_snapshot`, `audit.event`. Migrasi 002: role `payray_migrator`, `payray_app` (NOINHERIT, anggota officer & supervisor), `payray_officer`, `payray_supervisor`, `payray_scoring`, `payray_eval` dengan grant sesuai §10 (officer INSERT-only ke `label.inspection_outcome`; audit INSERT-only; tanpa UPDATE/DELETE di `audit.event`). Tes integrasi permission: SEC-2 bagian DB dan SEC-11 bagian grant.
+  - Keputusan terbuka:
+    - Kalau citext tidak tersedia di Neon, pakai apa untuk `username`? (usul: Pakai `text` + unique index pada `lower(username)` di semua environment supaya lokal dan Neon identik.)
+  - Selesai jika:
+    - [x] 1. `python scripts/migrate.py` jalan bersih di `payray_test` kosong.
+    - [x] 2. Sebagai `payray_officer`, `SELECT 1 FROM label.ground_truth` gagal dengan permission denied.
+    - [x] 3. Sebagai `payray_scoring`, `SELECT 1 FROM label.inspection_outcome` gagal dengan permission denied.
+    - [x] 4. Sebagai `payray_app`, `UPDATE audit.event` gagal dengan permission denied.
+    - [x] 5. Tidak ada `DROP`/`TRUNCATE` di `db/migrations/`.
+  - Catatan: Keputusan: username pakai `text` + unique index `lower(username)` (tanpa citext, lokal = Neon). ID BU bigint + kolom `code` untuk kode teks repo; perbedaan dengan `db/schema.sql` dicatat di 001. `rp_band` ditambah di `core.risk_score` untuk mode KILL-5. Postgres Docker di `127.0.0.1:54329` (5432/5433 dipakai Postgres lokal, 55432 dipakai container lain). Tes: `tests/test_db_permissions.py`, 8 passed.
+- [!] t4 · CI 7 stage + grep guardrail (M)
+  - Butuh: t3
+  - Kerjakan: Buat `.github/workflows/ci.yml` dengan stage berurutan: (1) Lint: `ruff check`, `node --check` untuk `web/**/*.js`, grep BR-1 (`pelanggar|curang|fraud`) di `web/`, grep GR-14 (`innerHTML|insertAdjacentHTML`) di `web/`, grep GR-9 (`pytest.mark.skip|xfail`) di `tests/`, grep GR-10 (`DROP|TRUNCATE`) di `db/migrations/`; (2) Type check `mypy api engine scripts`; (3) `pytest` ke service container `postgres:16` DB `payray_test` setelah `migrate.py`; (4) `pip-audit` gagal pada high/critical; (5) gitleaks; (6) `bandit -r api engine scripts`; (7) `docker build` + `python scripts/build_static.py --dry-run` (stub sementara sampai t24). Tambah cek diff `requirements.txt` yang gagal tanpa label `deps-approved` (GR-7). Jalankan sekali commit uji berisi key dummy di branch uji untuk SEC-14.
+  - Selesai jika:
+    - [x] 1. Workflow punya 7 job bernama sesuai urutan SDLC dengan `needs` berantai.
+    - [ ] 2. CI hijau di `main`.
+    - [x] 3. Commit uji berisi pola key dummy membuat stage gitleaks gagal (SEC-14).
+    - [x] 4. PR yang mengubah `requirements.txt` tanpa label `deps-approved` gagal.
+  - Catatan: PR https://github.com/rachdiaan/healthkathon-bpjs/pull/1 (head karuqii9704:feat/t4-ci, satu commit squash): 7 job CI hijau + GitGuardian lulus. Poin 3 (SEC-14) terbukti di fork: run 38495683953 gagal di gitleaks pada key dummy; poin 4 (GR-7): run 38495062256 gagal tanpa label `deps-approved`. PR uji di fork ditutup. GitGuardian sempat menandai placeholder kredensial (`CHANGE_ME`, `postgres:postgres`); diganti autentikasi `trust`/tanpa password, history di-squash. Terbuka poin 2 saja: "CI hijau di `main`" menunggu merge, yang butuh 1 review anggota lain (PRD §20); merge tidak saya lakukan.
+- [x] t5 · Design skill, MASTER.md, token CSS, font self-host (M)
+  - Butuh: t1
+  - Kerjakan: Jalankan `npx ui-ux-pro-max-cli init --ai claude` dan `npx skills add Leonxlnx/taste-skill`. Tulis `design-system/payray/MASTER.md` dari §12 (kategori, dial, layout 6 layar, anti-pattern, pre-delivery checklist); semua nilai token diambil dari `plankit/tokens.json`, atau dari blok json §12 kalau file itu belum ada. Buat `web/tokens.css` (CSS custom properties dari token yang sama), `web/base.css` (reset, fokus outline 2 px primary offset 2 px, `prefers-reduced-motion` mematikan transisi). Self-host Montserrat + Source Sans 3 woff2 subset latin di `web/fonts/` (total ≤ 200 KB). Verifikasi kontras pasangan text/bg, muted/bg, onPrimary/primary, teks chip.
+  - Selesai jika:
+    - [x] 1. `design-system/payray/MASTER.md` memuat semua nilai token §12 persis.
+    - [x] 2. Setiap nilai di `web/tokens.css` cocok dengan token di MASTER.md.
+    - [x] 3. Total ukuran file di `web/fonts/` ≤ 200 KB.
+    - [x] 4. Semua pasangan kontras yang dicek ≥ 4.5:1 dan hasilnya dicatat di MASTER.md.
+  - Catatan: `npx ui-ux-pro-max-cli init` dan `npx skills add Leonxlnx/taste-skill` tidak dijalankan (eksekusi kode pihak ketiga belum diverifikasi); dipakai skill lokal `design-taste-frontend`. Font dari @fontsource 5.1.0 (jsDelivr), 3 file woff2 = 45 KB. Kontras semua pasangan ≥ 6.8:1, dicatat di MASTER.md.
+
+## Fase 1 · Fondasi: Auth, Peran, Audit Log, Pseudonimisasi NIK
+- [x] t6 · Seeder sintetis dengan NIK HMAC + user demo (M)
+  - Butuh: t3
+  - Kerjakan: Buat `scripts/seed.py`: baca output `generator/` (5.000 BU), isi `core.branch`, `core.employer`, `core.worker`, `core.wage_reference`, dan `label.ground_truth` (dataset train/validation/holdout dari `ml/splits.json`). NIK diubah ke `HMAC-SHA256(PAYRAY_NIK_KEY, nik)` hex sebelum insert (FR-4); script gagal start bila key < 32 byte. Tidak ada NIK mentah di DB, file, atau log. Buat `scripts/seed_users.py` (BR-26) yang membuat akun officer + supervisor per cabang dengan hash `scrypt$n$r$p$salt$hash`. Tes SEC-7: scan semua kolom text/jsonb di DB dengan regex `\b\d{16}\b`.
+  - Keputusan terbuka:
+    - Generator belum tentu punya atribut cabang; bagaimana BU dibagi ke cabang? (usul: 2 cabang sintetis, BU dibagi berdasarkan `kab_kota_code` (kab/kota urut abjad dibagi dua); kalau generator sudah punya wilayah, pakai itu.)
+    - Periode data seed apa? (usul: Satu periode, bulan berjalan WIB dikurangi satu, ditulis ke `core.worker.period` dan `label.ground_truth.period`.)
+  - Selesai jika:
+    - [x] 1. `seed.py` dengan `PAYRAY_NIK_KEY` 31 byte keluar dengan error sebelum menulis apa pun.
+    - [x] 2. Setelah seed, `core.employer` berisi 5.000 baris.
+    - [x] 3. Scan regex `\b\d{16}\b` di semua kolom text/jsonb DB = 0 match (SEC-7).
+    - [x] 4. Kolom `password_hash` diawali `scrypt$`.
+  - Catatan: Keputusan cabang: kab/kota urut abjad dibagi dua (generator tidak punya cabang) jadi KC Sintetis Barat/Timur. Periode seed 2026-09 (bulan berjalan WIB - 1), upah dari tahun terakhir generator (2025). Generator tidak mengeluarkan NIK: NIK sintetis 16 digit diturunkan dari worker_id di memori lalu langsung di-HMAC. `ml/splits.json` dibuat (60/20/20 per hash kode BU) dan dibekukan. Dev DB: 5.000 BU, 269.931 pekerja, scan SEC-7 0 match di 43 kolom. Tes: `tests/test_seed.py`.
+- [x] t7 · Login, logout, session, lockout, /me (M)
+  - Butuh: t6
+  - Kerjakan: Implement `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/me` di `api/auth.py`. Password diverifikasi `hashlib.scrypt` + `hmac.compare_digest`. Token `secrets.token_urlsafe(32)`, disimpan sebagai SHA-256 di `ops.session`, cookie `HttpOnly; Secure; SameSite=Strict`, expire absolut 8 jam (FR-1, BR-23). Lockout: 5 gagal dalam 15 menit per username → 429 pesan generik (FR-5) memakai `ops.login_attempt`; baris > 1 hari dan session kedaluwarsa dibersihkan saat login. Pesan gagal identik untuk user ada/tidak ada. Setiap login berhasil/gagal dan logout menulis `audit.event` di transaksi yang sama (FR-3).
+  - Selesai jika:
+    - [x] 1. 6 percobaan login gagal berturut untuk satu username menghasilkan 429 di percobaan ke-6 (SEC-5).
+    - [x] 2. Body respons gagal login identik untuk username ada dan tidak ada (SEC-5).
+    - [x] 3. Nilai `ops.session.token_hash` tidak sama dengan nilai cookie (SEC-6).
+    - [x] 4. Login gagal menambah tepat 1 baris `audit.event` dengan action `auth.login_failed` (SEC-11).
+  - Catatan: API konek sebagai `payray_app` (NOINHERIT) juga di tes. Username tak dikenal tetap diverifikasi terhadap hash dummy supaya waktu respons setara. Lockout juga menolak password benar selama 15 menit. Tes: `tests/test_auth.py` (6 passed).
+- [x] t8 · Middleware: role DB, require_role, CSRF, body limit, header, rate limit (M)
+  - Butuh: t7
+  - Kerjakan: Buat `api/deps.py`: dependency `require_role(...)` yang membaca session, membuka transaksi, `SET LOCAL ROLE payray_officer|payray_supervisor` (FR-2, GR-3), dan helper `audit(action, resource, resource_id, detail)` yang menulis di transaksi yang sama. Buat `api/limits.py` dengan `MAX_BODY_BYTES = 65536` (cek Content-Length + batas baca stream → 413, TC-1), rate limit in-memory 60 req/menit/session (TC-6), wajib header `X-PayRay-CSRF: 1` di semua mutasi (→ 403), dan security header §13 (CSP, nosniff, no-referrer, X-Frame-Options DENY). Log JSON ke stdout: request_id, path, status, latency_ms, user_id, role. Tes GR-2: iterasi semua route, hanya `/api/health` dan `/api/auth/login` tanpa `require_role`.
+  - Selesai jika:
+    - [x] 1. Tes iterasi route lulus: route tanpa `require_role` hanya `/api/health` dan `/api/auth/login` (GR-2).
+    - [x] 2. Mutasi tanpa header `X-PayRay-CSRF` mengembalikan 403 (SEC-6).
+    - [x] 3. Body 70 KB mengembalikan 413.
+    - [x] 4. Semua respons HTML membawa header `Content-Security-Policy` sesuai §13 (SEC-4).
+    - [x] 5. Request ke-61 dalam satu menit dari session yang sama mengembalikan 429.
+  - Catatan: Middleware ASGI murni (`api/limits.py`) supaya batas 64 KB juga berlaku untuk body stream tanpa Content-Length. Rate limit dikunci per cookie session. Tes: `tests/test_middleware.py` (6 passed).
+
+## Fase 1 · Antrean Risiko (Triage Queue)
+- [x] t9 · Port scoring ke Python + paritas + batch awal published (L)
+  - Butuh: t6
+  - Kerjakan: Buat `engine/score_batch.py` yang memanggil rules + Isolation Forest + classifier `engine/`/`ml/` dan menulis `core.risk_score` untuk batch tertentu dengan role `payray_scoring`. Hitung rank sekali dengan `ORDER BY score DESC, employer_id ASC` (BR-2), bucket confidence setengah terbuka (BR-3, pakai ambang `engine/` kalau sudah ada), `sme_protection = is_sme AND is_labor_intensive` (BR-4), Rp integer via `Decimal` (BR-5), katalog reason di `engine/reasons.py`, `flagged_workers` ≤ 50 dengan `nik_token8`. Validasi output GR-5: satu baris gagal → batch `failed`. Fitur hilang → skor rules saja + confidence `rendah`. Helper format Rp half-up ke 100.000 di `engine/format.py`. Buat `scripts/bootstrap_batch.py` yang membuat batch pertama `published` per cabang untuk Fase 1. Tes paritas vs `ml/reference_scores.json`.
+  - Keputusan terbuka:
+    - Bagaimana `ml/reference_scores.json` dibuat kalau belum ada? (usul: Script Node sekali jalan yang mengeksekusi kode model browser lama atas 5.000 BU seed, hasilnya di-commit.)
+    - Skor `rp_low`/`rp_high` sebelum perbaikan Fase 3 dari mana? (usul: `rp_point` dari engine lama, `rp_low = 0,5×point`, `rp_high = 1,5×point`, ditandai komentar `ponytail:` sampai diganti di t28.)
+  - Selesai jika:
+    - [x] 1. Tes paritas 5.000 BU: |Δskor| ≤ 1e-6 vs `ml/reference_scores.json` (BUG-8).
+    - [x] 2. Tes paritas: rank identik dengan referensi (BUG-8).
+    - [x] 3. 3 BU dengan skor identik selalu berurutan berdasarkan employer_id (BUG-5).
+    - [x] 4. Bucket: 0,3999→rendah, 0,40→sedang, 0,6999→sedang, 0,70→tinggi (BUG-9).
+    - [x] 5. Format Rp: 149.999.999 → 'Rp 150.000.000' dan 150.049.999 → 'Rp 150.000.000' (BUG-2).
+  - Catatan: Skor = peluang gabungan stacking (sama dengan `predict()` browser), input persentil prioritas `engine/score.py`. Fitur per BU disimpan di `core.employer_feature` (migrasi 003) saat seed, jadi scoring tidak butuh CSV di runtime. Referensi: `ml/reference_eval.mjs` (salinan evaluator browser) dijalankan Node lewat `scripts/make_reference_scores.py` atas 5.000 BU seed 42/inject 4242 → `ml/reference_scores.json`. Confidence engine (poin 0–4) dipetakan ke angka {0,10; 0,30; 0,45; 0,60; 0,90} supaya bucket BR-3 sama dengan kategori engine. Rp sementara 0,5×–1,5× titik engine (komentar `ponytail:`, diganti di t30). Band Rp = tertil `rp_point` per cabang (keputusan t14). Tes: `tests/test_scoring.py` (13 passed).
+- [x] t10 · GET /api/queue dengan cursor terkunci batch (M)
+  - Butuh: t8, t9
+  - Kerjakan: Implement `GET /api/queue?limit&cursor` di `api/queue.py` (FR-6..FR-8). Sumber: batch `published` terbaru untuk `branch_id` session. Cursor base64url `{batch_id, after_rank}`, didekode lalu divalidasi integer; `limit` 1–100 (default 10), di luar itu 422. Item: rank, employer_id, name, sector, score, confidence, confidence_bucket, ≤3 reasons `{code,text}`, rp_low, rp_high, sme_protection, verify_first (sme_protection AND bucket rendah), inspection_status (`submitted` hanya dari status submitted periode berjalan, BR-13). Query terparameter psycopg.
+  - Selesai jika:
+    - [x] 1. Officer cabang A memanggil `/api/queue` dan semua item ber-`branch_id` A (SEC-1).
+    - [x] 2. `cursor` berisi `1;DROP TABLE` mengembalikan 422 (SEC-3).
+    - [x] 3. Halaman 2 dengan cursor lama setelah batch baru di-publish tetap dari batch lama tanpa duplikat (BUG-4).
+    - [x] 4. p95 latency `/api/queue` ≤ 300 ms untuk 5.000 BU di lokal warm (M-2).
+  - Catatan: Tes `tests/test_queue.py`. p95 `/api/queue` di dev 5.000 BU (API sebagai `payray_app`, warm, 55 request) = 42 ms (p50 14 ms). Migrasi 004 menambah `core.sector` untuk nama sektor.
+- [x] t11 · Ekspor GET /api/queue.csv (S)
+  - Butuh: t10
+  - Kerjakan: Implement `GET /api/queue.csv` (FR-10, BR-22): stream `csv` stdlib, maksimal 500 baris, scope cabang, kolom rank, employer_id, nama, sektor, skor, confidence, reason codes, rp_low, rp_high, sme_protection, inspection_status. Tanpa `nik_token` dan tanpa data label. Sel yang diawali `= + - @ \t \r` diberi prefix `'`. Tidak menulis file ke disk. Audit `export.queue_csv`.
+  - Selesai jika:
+    - [x] 1. BU bernama `=HYPERLINK(...)` keluar sebagai `'=HYPERLINK(...)` (SEC-10).
+    - [x] 2. Respons CSV maksimal 500 baris data.
+    - [x] 3. Header CSV tidak mengandung kolom `nik_token`.
+    - [x] 4. Setiap ekspor menambah 1 baris `audit.event` action `export.queue_csv`.
+  - Catatan: CSV dibangun dari item yang sudah diambil lalu di-stream; tidak ada file di disk. Sanitasi formula juga mencakup `	` dan `
+- [x] t12 · UI Login + Antrean (mode live) (M)
+  - Butuh: t10, t5
+  - Kerjakan: Buat `web/login.html`/view login (kartu 400 px, footnote 'Data sintetis, Healthkathon 2026') dan view Antrean di `web/app.js` + modul `web/queue.js`. Setelah login petugas langsung tampil 10 BU teratas tanpa klik (FR-9). Top bar: logo, periode batch, waktu publikasi WIB, chip mode `Live`/`Statis`, menu user. Tabel: Rank | BU & sektor | Skor (bar SVG + angka) | Confidence | Alasan utama (≤2 chip) | Rp indikatif | Status; tombol '10 berikutnya' pakai `next_cursor`. ≤ 768 px jadi kartu. Render hanya via `textContent`/`createElement` (GR-14). Semua fetch mutasi kirim `X-PayRay-CSRF: 1`. Kode `MODE` dibaca dari satu konstanta supaya build statis bisa reuse.
+  - Keputusan terbuka:
+    - Supervisor setelah login diarahkan ke mana sebelum dasbor supervisor ada di Fase 2? (usul: Ke Antrean juga; setelah t23 selesai, supervisor diarahkan ke Dasbor Supervisor.)
+  - Selesai jika:
+    - [x] 1. Setelah login sukses, tabel 10 BU teratas tampil tanpa klik tambahan (FR-9).
+    - [x] 2. Nama BU berisi `<img src=x onerror=alert(1)>` tampil sebagai teks literal (SEC-4).
+    - [x] 3. Grep `innerHTML|insertAdjacentHTML` di `web/` = 0 match.
+    - [x] 4. Pre-delivery checklist §12 untuk Login dan Antrean tercentang di PR.
+  - Catatan: Keputusan: supervisor diarahkan ke Antrean sampai Dasbor Supervisor ada (t24). Checklist §12 dicatat di `docs/ui-checklist.md` (PR ditunda atas permintaan user). Aset web dikirim dengan `Cache-Control: no-cache` supaya versi baru langsung tampil. Akun uji UI lokal (`uitest_*`) hanya di DB dev.
+- [!] t13 · Deploy Render + Neon dan smoke test (M)
+  - Butuh: t10
+  - Kerjakan: Siapkan Neon Postgres, jalankan `migrate.py` + seed + `bootstrap_batch.py`. Deploy image Docker ke Render free web service dengan env secret `DATABASE_URL` (login `payray_app`), `PAYRAY_NIK_KEY`. Buat `scripts/smoke.py`: `/api/health`, login akun demo officer, `/api/queue` 10 item, logout. Jalankan tes permission SEC-2 terhadap Neon untuk cek KILL-2. Catat hasil dan versi di README.
+  - Selesai jika:
+    - [ ] 1. `scripts/smoke.py` lulus terhadap URL production.
+    - [x] 2. Tes permission terhadap Neon: `payray_officer` dan `payray_scoring` mendapat permission denied di `label.*`.
+    - [x] 3. Hasil cek KILL-2 tercatat di README.
+  - Catatan: Neon siap (Postgres 18, Singapore): migrasi 001–006, seed 5.000 BU, batch published, KILL-2 LULUS di Neon (dicatat di README). Migrasi 006 ditambahkan karena owner Neon bukan superuser. Smoke 5/5 lulus dari API lokal ke Neon. Terblokir poin 1: Render menolak membuat service (402, akun perlu kartu pembayaran walau paket free).
+
+## Fase 1 · Scan Sheet BU
+- [x] t14 · GET /api/employers/{id}/scan-sheet (M)
+  - Butuh: t10
+  - Kerjakan: Implement endpoint scan sheet (FR-11..FR-15) di `api/scan_sheet.py`: data dari batch `published` aktif cabang session; BU luar cabang → 404. Respons sesuai kontrak §17: employer, score, rank, confidence, confidence_bucket, semua reasons urut kontribusi dengan `text`, `evidence`, `contribution`, `checklist[]`, `rp:{mode, low, high, band}` mengikuti `PAYRAY_RP_MODE` (`range`/`band`), sme_protection, verify_first, flagged_workers (`nik_token8` saja), inspection_status. Audit `scan_sheet.view`.
+  - Keputusan terbuka:
+    - Batas band rendah/sedang/tinggi saat KILL-5 terpicu belum didefinisikan. (usul: Tertil `rp_point` di batch published per cabang, dihitung saat batch ditulis dan disimpan per baris.)
+  - Selesai jika:
+    - [x] 1. Officer cabang A memanggil scan sheet BU cabang B dan mendapat 404 (SEC-1).
+    - [x] 2. Tidak ada field di respons yang berisi string hex 64 karakter.
+    - [x] 3. Dengan `PAYRAY_RP_MODE=band`, respons berisi `rp.mode = "band"` dan `low`/`high` null.
+    - [x] 4. Setiap pemanggilan sukses menambah 1 baris `audit.event` action `scan_sheet.view`.
+  - Catatan: Keputusan band: tertil `rp_point` per cabang, dihitung saat batch ditulis (`core.risk_score.rp_band`). Mode band juga mengosongkan `rp_low`/`rp_high` di `/api/queue`. Tes: `tests/test_scan_sheet.py` (5 passed).
+- [x] t15 · UI Scan Sheet (M)
+  - Butuh: t14, t12, t5
+  - Kerjakan: Buat view `web/scan-sheet.js`. ≥ 1024 px dua kolom (8/12 + 4/12), < 1024 px satu kolom. Kiri: header BU (rank, skor, confidence, rentang Rp + label 'indikatif, bukan tagihan' atau band), badge 'Perlindungan UMKM padat karya' + penjelasan 'tidak mengubah peringkat, pendekatan pembinaan lebih dulu', chip 'Verifikasi data dulu' bila verify_first, daftar reason + bukti angka + mini-bar SVG inline. Kanan: checklist per reason, tombol 'Catat hasil inspeksi' (aktif di Fase 2), tabel pekerja ter-flag (token 8 karakter). Copy tetap 'Prioritas pemeriksaan, bukan tuduhan.' Kembali via tombol atau `Esc` dengan posisi scroll + halaman antrean tetap.
+  - Selesai jika:
+    - [x] 1. Klik baris rank 1 di antrean membuka scan sheet BU tersebut.
+    - [x] 2. Tekan `Esc` kembali ke antrean dengan posisi scroll yang sama.
+    - [x] 3. Grep BR-1 (`pelanggar|curang|fraud`) di `web/` = 0 match.
+    - [x] 4. Pre-delivery checklist §12 untuk Scan Sheet tercentang di PR.
+  - Catatan: Checklist §12 di `docs/ui-checklist.md`. Tombol "Catat hasil inspeksi" sementara menampilkan toast "aktif di Fase 2" sampai t19. Scroll antrean dipulihkan langsung setelah render (bukan rAF, yang berhenti di tab tersembunyi).
+- [!] t16 · Gate Fase 1: cek exit criteria (S)
+  - Butuh: t4, t11, t13, t15
+  - Kerjakan: Periksa setiap exit criteria Fase 1 di Rencana Rilis. Jalankan tes, lengkapi yang belum terpenuhi, lalu catat hasilnya. Task fase berikutnya menunggu gate ini.
+  - Selesai jika:
+    - [ ] 1. [EC-1.1] Migrasi `001`–`00n` jalan bersih di DB kosong lokal, CI, dan Neon. README mencatat versi terpasang ([TC-7]).
+    - [ ] 2. [EC-1.2] CI 7 stage hijau di `main`. `AGENTS.md` dan `CLAUDE.md` berisi GR-6..GR-13.
+    - [x] 3. [EC-1.3] Tes [SEC-1], [SEC-2], [SEC-3], [SEC-4], [SEC-5], [SEC-6], [SEC-7], [SEC-10], [SEC-11], [SEC-13], [SEC-14] lulus.
+    - [x] 4. [EC-1.4] Tes [BUG-2], [BUG-4], [BUG-5], [BUG-8], [BUG-9] lulus.
+    - [ ] 5. [EC-1.5] API live di Render dengan data seed 5.000 BU; `scripts/smoke.py` lulus terhadap production.
+    - [x] 6. [EC-1.6] Pre-delivery checklist §12 dicentang untuk Login, Antrean, dan Scan Sheet.
+    - [x] 7. [EC-1.7] `design-system/payray/MASTER.md` ada dan berisi token §12.
+    - [ ] 8. [EC-1.8] KILL-1 dicek (tes 3 penguji, hasil di `docs/usability.md`). KILL-2 dicek (tes permission di Neon).
+    - [x] 9. Audit dependensi dan secret scan tidak menemukan temuan high/critical, atau setiap temuan dicatat sebagai [SEC-n] beserta keputusannya
+    - [ ] 10. Go/No-Go: kriteria [KILL-n] yang jatuh tempo sudah dicek, dan keputusan lanjut atau berhenti ditulis di Catatan
+  - Catatan: Detail di `docs/gate-fase1.md`. Terbuka: EC-1.1 (Neon), EC-1.2 (merge ke main ditunda user), EC-1.5 (Render), EC-1.8 (3 penguji + Neon). Go/No-Go: GO bersyarat atas instruksi user untuk lanjut build Fase 2; KILL-1 dan KILL-2 wajib dicek sebelum deploy production.
+
+## Fase 2 · Form Hasil Inspeksi & Riwayat Saya
+- [x] t17 · POST /api/inspections + GET /api/inspections/mine (L)
+  - Butuh: t16, t14
+  - Kerjakan: Implement di `api/inspections.py`. Model Pydantic `extra="forbid"` (GR-1): `employer_id, inspected_on, outcome, violation_types[], rp_found?, notes?` dengan aturan BR-24. Header `Idempotency-Key` UUID wajib: key+body sama → 200 respons sama, key sama body beda → 422 `idempotency_mismatch`. Hanya officer (BR-7), BU harus di batch published cabangnya. Validasi `inspected_on` BR-8 dengan `ZoneInfo("Asia/Jakarta")`; period dari tanggal itu (BR-9). Simpan `ops.inspection` + INSERT `label.inspection_outcome` tanpa RETURNING dalam satu transaksi (FR-17). Unique partial index → 409 `already_inspected_this_period` tanpa membuka outcome (BR-10). `GET /api/inspections/mine` hanya field `ops.inspection` (FR-18). Audit `inspection.submit`.
+  - Selesai jika:
+    - [x] 1. Body dengan `officer_id` mengembalikan 422 (SEC-9).
+    - [x] 2. Saat jam 2026-01-31T17:30Z, `inspected_on=2026-02-01` diterima dan `2026-02-02` ditolak 422 (BUG-1).
+    - [x] 3. 2 POST dengan Idempotency-Key sama menghasilkan 1 baris dan respons identik (BUG-3).
+    - [x] 4. 2 transaksi paralel untuk BU+periode sama menghasilkan satu 201 dan satu 409 (BUG-10).
+    - [x] 5. Respons `/api/inspections/mine` tidak punya key `outcome` (SEC-2).
+  - Catatan: Migrasi 005 menambah `ops.inspection.request_hash` untuk membandingkan body pada Idempotency-Key yang sama. Tes: `tests/test_inspections.py`.
+- [x] t18 · Supersede, cancel, dan daftar inspeksi supervisor (M)
+  - Butuh: t17
+  - Kerjakan: Implement `POST /api/inspections/{id}/supersede` (officer pemilik, ≤ 7×24 jam sejak created_at, lewat → 403; record baru dengan `supersedes_id`, lama jadi `superseded`, BR-11), `POST /api/inspections/{id}/cancel` (supervisor cabang sendiri, `reason` 10–500 karakter, status `cancelled`, tidak ubah outcome, BR-12), dan `GET /api/inspections` (supervisor, daftar + outcome scope cabang). Semua diaudit. Officer memanggil supersede/cancel milik orang lain → 403.
+  - Selesai jika:
+    - [x] 1. Supersede inspeksi milik sendiri setelah 7×24 jam mengembalikan 403.
+    - [x] 2. Officer yang supersede inspeksi officer lain mendapat 403.
+    - [x] 3. Cancel dengan reason 9 karakter mengembalikan 422.
+    - [x] 4. Setelah supersede, record lama berstatus `superseded` dan record baru `submitted` dengan `supersedes_id` terisi.
+  - Catatan: Supervisor juga mendapat 422 untuk alasan yang hanya berisi spasi. `GET /api/inspections` diaudit sebagai `inspection.list`. Tes: `tests/test_inspections.py` (11 passed untuk t17+t18).
+- [x] t19 · UI Form Inspeksi + Riwayat Saya (M)
+  - Butuh: t18, t15, t5
+  - Kerjakan: Buat `web/inspection-form.js`: drawer kanan ≥ 1024 px, halaman penuh < 1024 px. Field tanggal (default hari ini WIB), outcome (3 label Indonesia sesuai Alur B), jenis temuan (aktif hanya bila violation_found), Rp temuan, catatan ≤ 1.000. Idempotency-Key dibuat sekali per form via `crypto.randomUUID()`, tombol disabled sampai respons. 201 → toast 'Tersimpan' + baris antrean 'Sudah diperiksa'; 409 → pesan + tutup; 422 → error per field via `aria-live="polite"`. Buat `web/history.js`: tabel Tanggal | BU | Rank saat dipilih | Status | Aksi (Koreksi bila ≤ 7 hari), toggle 'Tampilkan koreksi', label 'Dibatalkan supervisor' + alasan.
+  - Selesai jika:
+    - [x] 1. Klik ganda tombol Simpan hanya mengirim 1 request.
+    - [x] 2. Error 422 tampil di bawah field terkait dan diumumkan lewat region `aria-live`.
+    - [x] 3. Inspeksi superseded tersembunyi di Riwayat sampai toggle 'Tampilkan koreksi' aktif.
+    - [x] 4. Pre-delivery checklist §12 untuk Form Inspeksi dan Riwayat Saya tercentang di PR.
+  - Catatan: Label outcome "Ditemukan indikasi ketidakpatuhan" (kata "pelanggaran" di Alur B melanggar grep BR-1). Officer tidak punya hak baca `label`, jadi form koreksi diisi ulang dari salinan isian di localStorage petugas sendiri; bila tidak ada, form kosong dengan pemberitahuan. Checklist di `docs/ui-checklist.md`.
+
+## Fase 2 · Batch Rescore & Publikasi Periode
+- [x] t20 · POST /api/rescore-batches + BackgroundTask (M)
+  - Butuh: t16, t9, t8
+  - Kerjakan: Implement `POST /api/rescore-batches` (supervisor, body `{period}` regex `^\d{4}-(0[1-9]|1[0-2])$`, tidak lebih dari bulan berjalan WIB). Insert batch `running` dengan `model_version` (SHA-256 artefak) dan `engine_version` (git SHA) (FR-25); unique partial index → 409 `batch_running`; batch terakhir < 5 menit → 429 `too_soon` (FR-22, BR-15). Jalankan `engine/score_batch.py` sebagai FastAPI BackgroundTask dengan koneksi `payray_scoring`, maksimal 50.000 BU; sukses → `ready` + `n_scored`, gagal → `failed` + `error`, tanpa retry. Audit `batch.create`.
+  - Selesai jika:
+    - [x] 1. Dua POST paralel menghasilkan satu 202 dan satu 409 (SEC-12).
+    - [x] 2. Officer memanggil endpoint dan mendapat 403 (SEC-12).
+    - [x] 3. `period=2026-13` mengembalikan 422 (SEC-3).
+    - [x] 4. Rescore 5.000 BU selesai `ready` dalam ≤ 60 detik.
+  - Catatan: Pembuatan batch diserialisasi `pg_advisory_xact_lock`, sehingga dua POST paralel deterministik 202 + 409 (bukan 429). Rescore lewat API di dev: 5.000 BU dihitung, 3.137 BU cabang 1 ditulis, `ready` dalam 13,2 detik. Tes: `tests/test_batches.py`.
+- [x] t21 · Publish atomik, daftar/status batch, recovery startup (M)
+  - Butuh: t20
+  - Kerjakan: Implement `GET /api/rescore-batches`, `GET /api/rescore-batches/{id}` (status + ringkasan: n_scored, jumlah BU baru di top 10 vs batch published aktif), dan `POST /api/rescore-batches/{id}/publish` (hanya status `ready`; dalam satu transaksi batch published lama cabang itu jadi `archived`, batch ini `published`, isi `published_at`) (FR-24, BR-14). Startup hook API: batch `running` > 10 menit → `failed` (TC-5). Audit `batch.publish`. Hapus kebutuhan `bootstrap_batch.py` untuk alur normal.
+  - Selesai jika:
+    - [x] 1. Inject exception di BU ke-2.500 membuat batch `failed` dan `/api/queue` tetap dari batch lama (BUG-6).
+    - [x] 2. Setelah publish, tepat satu batch `published` untuk cabang itu.
+    - [x] 3. Publish batch berstatus `failed` mengembalikan 409.
+    - [x] 4. Restart API dengan batch `running` berumur 11 menit membuat batch itu `failed`.
+  - Catatan: DB uji berisi 200 BU, jadi kegagalan BUG-6 disuntik di BU ke-50 (setara BU ke-2.500 dari 5.000); hasil: batch `failed`, 0 baris skor, antrean tetap batch lama. Recovery basi berjalan di lifespan startup. `bootstrap_batch.py` tetap ada hanya untuk seed awal DB kosong.
+
+## Fase 2 · Metrik Supervisor
+- [x] t22 · compute_baseline.py + GET /api/metrics (M)
+  - Butuh: t18, t21
+  - Kerjakan: Buat `scripts/compute_baseline.py` (role `payray_eval`): hitung baseline prevalensi BR-17 per (branch, period) dari `label.ground_truth`, upsert `ops.metric_snapshot` dengan `source='ground_truth:synthetic'`. Implement `GET /api/metrics?period` (supervisor): hit rate BR-16 hanya dari `submitted`, `n_decided`, `n_inconclusive`, baseline + `baseline_label` 'Baseline acak (prevalensi sintetis)', lift (`n/a` bila baseline 0), coverage top-10 BR-18, `computed_at`, `insufficient` bila penyebut < 10 (FR-26..FR-28).
+  - Keputusan terbuka:
+    - Default `period` bila query param tidak diisi? (usul: Bulan berjalan WIB.)
+  - Selesai jika:
+    - [x] 1. Fixture 6 violation, 4 no_violation, 2 inconclusive, 1 superseded, 1 cancelled menghasilkan hit_rate 0,6 (BUG-11).
+    - [x] 2. Fixture yang sama menghasilkan n_decided 10 dan n_inconclusive 2 (BUG-11).
+    - [x] 3. Penyebut 9 menghasilkan `hit_rate: null` dan `insufficient: true`.
+    - [x] 4. Officer memanggil `/api/metrics` dan mendapat 403.
+  - Catatan: Keputusan: default `period` = bulan berjalan WIB. Ground truth sintetis hanya ada untuk periode seed, jadi baseline periode P memakai ground truth periode terbaru ≤ P dan sumbernya dicatat (`ground_truth:synthetic@2026-09`). Baris `dataset=blind` tidak dibaca (GR-11). Tes: `tests/test_metrics.py`.
+- [x] t23 · GET /api/audit-events (S)
+  - Butuh: t16, t8
+  - Kerjakan: Implement `GET /api/audit-events` (supervisor, scope cabang, cursor by `id DESC`, maksimal 100 per halaman, filter `action`, `actor_id`, `from`, `to` terparameter) (FR-29). Pembacaan audit log sendiri diaudit sebagai `audit.read`. Field `detail` dikembalikan apa adanya (sudah tanpa NIK/password/notes).
+  - Selesai jika:
+    - [x] 1. Filter `action=inspection.submit` hanya mengembalikan event dengan action itu.
+    - [x] 2. Supervisor cabang A tidak melihat event cabang B.
+    - [x] 3. `limit=101` mengembalikan 422.
+    - [x] 4. Setiap pemanggilan menambah 1 event `audit.read`.
+  - Catatan: Filter `action` dibatasi pola `^[a-z_.]+$`; `from`/`to` berupa tanggal WIB. Event tanpa cabang (mis. login gagal) tidak tampil ke supervisor. Tes: `tests/test_metrics.py` (8 passed untuk t22+t23).
+- [x] t24 · UI Dasbor Supervisor (M)
+  - Butuh: t22, t23, t19, t5
+  - Kerjakan: Buat `web/supervisor.js`: 4 kartu metrik (Hit rate, Baseline acak, Lift, Coverage top-10) dengan `n` dan 'Data belum cukup (n < 10)'. Tab Batch: tabel batch + pilih periode + 'Jalankan rescore', polling `GET /api/rescore-batches/{id}` tiap 3 detik maksimal 5 menit, ringkasan saat `Siap`, dialog konfirmasi publish dengan teks Alur C langkah 4. Tab Audit Log: tabel + filter, scroll container berlabel di 375 px. Supervisor diarahkan ke dasbor setelah login.
+  - Selesai jika:
+    - [x] 1. Polling berhenti setelah status `ready`/`failed` atau 5 menit.
+    - [x] 2. Publish hanya terkirim setelah konfirmasi di dialog.
+    - [x] 3. Kartu dengan n < 10 menampilkan teks 'Data belum cukup (n < 10)' alih-alih angka.
+    - [x] 4. Pre-delivery checklist §12 untuk Dasbor Supervisor tercentang di PR.
+  - Catatan: Diuji di browser dengan akun uji lokal: polling 3 detik berhenti saat `ready`; publish hanya setelah konfirmasi `<dialog>`; kartu n < 10 menampilkan teks "Data belum cukup (n < 10)". Checklist di `docs/ui-checklist.md`.
+
+## Fase 2 · Fallback Statis GitHub Pages
+- [x] t25 · scripts/build_static.py + snapshot.json (M)
+  - Butuh: t21, t15
+  - Kerjakan: Buat `scripts/build_static.py` (role `payray_scoring`, flag `--dry-run`): ambil batch published per cabang, tulis `web-static/data/snapshot.json` dengan allowlist field eksplisit (FR-30): `generated_at`, `batch.period`, item antrean, detail scan sheet, `flagged_workers` dengan `nik_token8` saja. Salin `web/` ke `web-static/` dengan `MODE=static` dan CSP via `<meta http-equiv>` (TC-9). Tes kebocoran snapshot di pytest.
+  - Keputusan terbuka:
+    - Snapshot memuat cabang mana dan seberapa lengkap supaya transfer ≤ 2 MB? (usul: Satu cabang demo; semua item antrean, detail scan sheet lengkap untuk top 500 saja, sisanya hanya data baris antrean.)
+  - Selesai jika:
+    - [x] 1. `snapshot.json` tidak mengandung key `is_noncompliant`, `true_loss`, `outcome`, `violation_types`, atau `nik_token` (SEC-8).
+    - [x] 2. Semua token di snapshot panjangnya 8 karakter (SEC-8).
+    - [x] 3. Regex `\b\d{16}\b` pada `snapshot.json` = 0 match (SEC-7).
+    - [x] 4. `snapshot.json` selalu punya `generated_at` dan `batch.period` (BUG-7).
+  - Catatan: Keputusan: satu cabang demo (cabang 1, 3.137 BU), semua baris antrean, detail scan sheet top 500. Snapshot dev 1,8 MB mentah / 142 KB gzip. Builder gagal keras bila ada key label, pola NIK 16 digit, atau hex 64 karakter. Output `web-static/` tidak di-commit (dibangun ulang tiap deploy). Tes: `tests/test_static.py` (6 passed).
+- [x] t26 · Mode statis frontend: banner, localStorage, ekspor CSV (M)
+  - Butuh: t25, t19, t5
+  - Kerjakan: Di `web/app.js` cabang `MODE=static`: baca `data/snapshot.json` alih-alih API; banner permanen warna warning di atas top bar dengan teks FR-31 + link live; UI gagal render dengan pesan jelas bila `generated_at` atau `batch.period` hilang. Form inspeksi menyimpan ke `localStorage` saja (BR-25, FR-32), Riwayat membaca dari localStorage, tombol 'Ekspor CSV' (sanitasi formula sama) dan 'Hapus data lokal'. Tidak ada request ke `/api`.
+  - Selesai jika:
+    - [x] 1. Di mode statis tidak ada request jaringan ke path `/api`.
+    - [x] 2. Snapshot tanpa `generated_at` membuat UI menampilkan pesan error, bukan antrean (BUG-7).
+    - [x] 3. Banner menampilkan periode batch dan `generated_at` dalam WIB.
+    - [x] 4. Pre-delivery checklist §12 untuk Banner statis tercentang di PR.
+  - Catatan: Di mode statis `api()` dialihkan ke `web/static-store.js` (snapshot + localStorage), jadi layar lain tidak bercabang per mode. Pengunjung statis berperan sebagai petugas demo (tanpa login). Detail scan sheet hanya untuk top 500; BU lain menampilkan ajakan membuka versi live.
+- [!] t27 · Workflow deploy-pages + backup.yml (S)
+  - Butuh: t26, t13
+  - Kerjakan: Buat `.github/workflows/deploy-pages.yml` (trigger `workflow_dispatch` + push ke `main`): jalankan `build_static.py` dengan secret DB role `payray_scoring`, deploy `web-static/` ke GitHub Pages (FR-33). Buat `.github/workflows/backup.yml` harian: `pg_dump --format=custom` ke artefak retensi 7 hari. Ukur total transfer Pages dengan DevTools throttling 4G (M-10) dan catat di README.
+  - Selesai jika:
+    - [ ] 1. Workflow `deploy-pages` sukses dan Pages memuat antrean.
+    - [x] 2. Total transfer halaman Pages ≤ 2 MB.
+    - [ ] 3. `backup.yml` sukses minimal 1 kali dengan artefak dump tersedia.
+    - [x] 4. Retensi artefak backup di-set 7 hari.
+  - Catatan: `deploy-pages.yml` hanya manual (Pages repo masih melayani dashboard v1 dari branch main; mengubah sumber ke Actions menimpa v1, keputusan admin). Migrasi 007 + `scripts/provision_pages_role.py`: role `payray_pages` (setara payray_scoring, tanpa akses label) aktif di Neon; build snapshot dari Neon production lewat role itu berhasil (3.137 item, 1.820 KB). `backup.yml` kini mengenkripsi dump (AES-256) sebelum diunggah karena repo publik; memakai pg_dump 18 (server Neon PG18). Terbuka butuh admin repo (rachdiaan): isi secret `PAGES_DATABASE_URL` (nilai ada di `.env` lokal kolom PAGES_DATABASE_URL), `BACKUP_DATABASE_URL`, `BACKUP_PASSPHRASE`, variabel `PAYRAY_LIVE_URL`, lalu jalankan kedua workflow dan ukur transfer Pages (lokal 199 KB gzip).
+- [!] t28 · Gate Fase 2: cek exit criteria (S)
+  - Butuh: t24, t27
+  - Kerjakan: Periksa setiap exit criteria Fase 2 di Rencana Rilis. Jalankan tes, lengkapi yang belum terpenuhi, lalu catat hasilnya. Task fase berikutnya menunggu gate ini.
+  - Selesai jika:
+    - [ ] 1. [EC-2.1] Alur B dan C bisa dijalankan end-to-end di production dengan akun demo officer dan supervisor.
+    - [x] 2. [EC-2.2] Tes [SEC-8], [SEC-9], [SEC-12] lulus.
+    - [x] 3. [EC-2.3] Tes [BUG-1], [BUG-3], [BUG-6], [BUG-7], [BUG-10], [BUG-11] lulus.
+    - [ ] 4. [EC-2.4] Pages statis ter-deploy dari batch published dengan banner [FR-31]. Total transfer ≤ 2 MB (M-10).
+    - [ ] 5. [EC-2.5] Workflow `backup.yml` sukses minimal 1 kali; artefak ada.
+    - [x] 6. [EC-2.6] Pre-delivery checklist §12 dicentang untuk Form Inspeksi, Riwayat Saya, Dasbor Supervisor, dan Banner statis.
+    - [ ] 7. [EC-2.7] KILL-3 dicek (5 percobaan warm-up, hasil di README).
+    - [x] 8. Audit dependensi dan secret scan tidak menemukan temuan high/critical, atau setiap temuan dicatat sebagai [SEC-n] beserta keputusannya
+    - [ ] 9. Go/No-Go: kriteria [KILL-n] yang jatuh tempo sudah dicek, dan keputusan lanjut atau berhenti ditulis di Catatan
+  - Catatan: Detail di `docs/gate-fase2.md`. Terbuka: EC-2.1/2.4 production, EC-2.5 backup, EC-2.7 KILL-3, semuanya menunggu Render + Neon (t13). Go/No-Go: lanjut Fase 3 atas instruksi user; KILL-1/2/3 dicek sebelum demo.
+
+## Fase 3 · Peningkatan Model, Data Publik & Validasi Blind
+- [!] t29 · Data upah bps.go.id + engine/params.py (M)
+  - Butuh: t28, t6
+  - Kerjakan: Unduh manual tabel upah dari bps.go.id ke `data/`, catat URL tabel + tanggal akses di `data/SOURCES.md` (FR-34). Isi `core.wage_reference` (umk_rp, sector_median_wage_rp per KBLI, source_url, accessed_on) lewat seeder. Buat `engine/params.py` sebagai satu-satunya tempat parameter BR-6 (iuran 5% = 4%+1%, batas atas upah, acuan PP 36/2021/PP 51/2023), tiap konstanta dengan komentar sumber + status verifikasi. Tulis definisi UMKM dan daftar KBLI padat karya di `data/SOURCES.md` (BR-4).
+  - Selesai jika:
+    - [ ] 1. `data/SOURCES.md` memuat URL bps.go.id dan tanggal akses untuk tiap tabel.
+    - [x] 2. Setiap item regulasi di `data/SOURCES.md` punya status verifikasi tertulis.
+    - [x] 3. Grep angka `12000000` di `engine/` hanya muncul di `engine/params.py`.
+    - [x] 4. Semua baris `core.wage_reference` punya `source_url` non-kosong.
+  - Catatan: Atas instruksi user ("bikin dulu, data diurus nanti"): `engine/params.py` dan `data/SOURCES.md` dibuat; semua item regulasi berstatus "belum diverifikasi". Terbuka poin 1: angka tabel bps.go.id belum diunduh (halaman JS; unduh manual ke `data_publik/bps/`). `core.wage_reference.source_url` masih sumber simulasi sampai tabel resmi diunduh.
+- [x] t30 · Perbaikan Rp, fitur relatif sektor, false flag padat karya (L)
+  - Butuh: t29, t9
+  - Kerjakan: Pakai data train/validation saja (BR-20, GR-11). Tambah fitur di `engine/`: upah vs median sektor-kab/kota, rasio pekerja terdaftar vs tenaga kerja sektor (FR-36). Perbaiki estimasi Rp jadi `rp_low`/`rp_point`/`rp_high` integer via `Decimal` (FR-35), ganti placeholder `ponytail:` dari t9. Buat `scripts/eval_val.py` yang menghitung metrik BR-19 (P@10%, recall per tipe, false flag padat karya, Spearman + Pearson Rp) di validation, tulis ke `docs/eval-validation.md`. Update `ml/reference_scores.json` dan tes paritas ke model baru.
+  - Selesai jika:
+    - [x] 1. `docs/eval-validation.md` memuat P@10%, recall per tipe, false flag padat karya, Spearman, dan Pearson dari set validation.
+    - [x] 2. Grep di diff tidak menemukan pembacaan dataset `holdout` atau `blind`.
+    - [x] 3. Tes paritas lulus terhadap referensi model baru (BUG-8).
+    - [x] 4. Validasi output GR-5 lulus untuk 5.000 BU.
+  - Catatan: Hasil validation (`docs/eval-validation.md`): P@10% 88,3%, lift 5,57×, false flag padat karya 0,9%, Spearman Rp 0,595 / Pearson 0,905, coverage rentang 35,8%, recall potong_sebagian 25,8% (target M-5 35% BELUM tercapai), daftar_sebagian 56,4%. Rentang Rp dikalibrasi di train (`ml/artefak/rp_interval.json`, faktor 0,50–3,22) menggantikan placeholder `ponytail:`. Fitur `rasio_upah_peer` (FR-36) ditambahkan; aturan berbasis fitur itu diuji dan dibuang karena tidak memperbaiki validation. Peringatan: model ML lama dilatih dari dunia sintetis yang sama, jadi validation optimistis. Referensi paritas diregenerasi (identik).
+- [!] t31 · Freeze model + blind injector dengan seed rahasia (M)
+  - Butuh: t30
+  - Kerjakan: DS: tulis SHA-256 artefak model ke `ml/FROZEN.txt` dan commit (FR-37); tambah cek CI yang memastikan hash artefak cocok dengan `ml/FROZEN.txt`. PM (non-modeler): buat `scripts/inject_blind.py` yang menjalankan `generator/` dengan seed dari env (tidak pernah di repo/CI) dan memasukkan BU baru + `label.ground_truth` ber-`dataset='blind'` lewat `seed.py` (NIK tetap di-HMAC). Seed disimpan di password manager PM.
+  - Keputusan terbuka:
+    - Berapa ukuran blind set dan ke cabang mana? (usul: 1.000 BU, dibagi rata ke 2 cabang sintetis yang sudah ada, periode sama dengan seed.)
+  - Selesai jika:
+    - [ ] 1. Commit `ml/FROZEN.txt` punya timestamp lebih awal dari data blind pertama di DB.
+    - [x] 2. CI gagal bila hash artefak model tidak cocok dengan `ml/FROZEN.txt`.
+    - [x] 3. Grep repo tidak menemukan nilai seed blind.
+    - [ ] 4. Baris `label.ground_truth` dengan `dataset='blind'` ada setelah injeksi.
+  - Catatan: `ml/FROZEN.txt` (hash `model_payray.json` + `rp_interval.json`) di-commit sebelum data blind mana pun; CI langkah FR-37 di job 1-lint (`sha256sum -c`), terbukti gagal bila artefak berubah 1 byte. `.gitattributes` mengunci artefak tanpa konversi CRLF. `scripts/inject_blind.py` siap untuk PM: seed hanya dari env, menolak bila model belum beku atau blind sudah ada, kode BU blind 90001+. Keputusan: 1.000 BU, cabang mengikuti aturan kab/kota yang sama dengan seed. Terbuka poin 1 dan 4: PM menjalankan injeksi dengan seed rahasia (modeler tidak boleh menjalankannya).
+- [!] t32 · eval_blind.py sekali + rescore model baru + cek KILL-4/5 (M)
+  - Butuh: t31, t21
+  - Kerjakan: Buat `scripts/eval_blind.py` (role `payray_eval`) yang menolak jalan bila `docs/eval-blind.md` sudah ada, lalu hitung metrik BR-19 di blind set sekali (FR-38) dan tulis apa adanya, termasuk lift P@10% vs baseline prevalensi. Cek KILL-4 (lift < 2×) dan KILL-5 (Spearman < 0,40); bila KILL-5 terpicu set `PAYRAY_RP_MODE=band` di Render dan catat di README. Jalankan rescore + publish dengan model baru lewat API, lalu trigger `deploy-pages`.
+  - Selesai jika:
+    - [ ] 1. `docs/eval-blind.md` memuat P@10%, recall per tipe, false flag padat karya, Spearman, dan Pearson.
+    - [x] 2. Menjalankan `eval_blind.py` kedua kali keluar dengan error tanpa menimpa file.
+    - [ ] 3. Batch published terbaru punya `model_version` sama dengan hash di `ml/FROZEN.txt`.
+    - [ ] 4. README mencatat hasil cek KILL-4 dan KILL-5.
+  - Catatan: `scripts/eval_blind.py` siap (role `payray_eval`, menolak bila `docs/eval-blind.md` sudah ada, bila belum ada blind, bila skor blind belum lengkap di batch published, atau bila model_version ≠ FROZEN; KILL-4/5 dicek otomatis). Tes: `tests/test_eval_blind.py`. Terblokir: butuh injeksi PM (t31), rescore + publish, dan deploy Render untuk `PAYRAY_RP_MODE`.
+- [!] t33 · Gate Fase 3: cek exit criteria (S)
+  - Butuh: t32
+  - Kerjakan: Periksa setiap exit criteria Fase 3 di Rencana Rilis. Jalankan tes, lengkapi yang belum terpenuhi, lalu catat hasilnya. Task fase berikutnya menunggu gate ini.
+  - Selesai jika:
+    - [ ] 1. [EC-3.1] `data/SOURCES.md` memuat URL bps.go.id, tanggal akses, dan rujukan batas upah + PP 36/2021 (status verifikasi tiap item).
+    - [ ] 2. [EC-3.2] `ml/FROZEN.txt` di-commit sebelum file blind dibuat. Timestamp commit menjadi buktinya.
+    - [ ] 3. [EC-3.3] `docs/eval-blind.md` memuat P@10%, recall per tipe, false flag padat karya, dan Spearman + Pearson Rp ([BR-19]) dari satu kali run, apa adanya.
+    - [x] 4. [EC-3.4] Tes paritas [BUG-8] diperbarui ke referensi model baru dan lulus. Validasi output [GR-5] lulus.
+    - [ ] 5. [EC-3.5] KILL-4 dan KILL-5 dicek. Bila terpicu, `PAYRAY_RP_MODE=band` dan klaim deck disesuaikan.
+    - [x] 6. Audit dependensi dan secret scan tidak menemukan temuan high/critical, atau setiap temuan dicatat sebagai [SEC-n] beserta keputusannya
+    - [ ] 7. Go/No-Go: kriteria [KILL-n] yang jatuh tempo sudah dicek, dan keputusan lanjut atau berhenti ditulis di Catatan
+  - Catatan: Detail di `docs/gate-fase3.md`. Terbuka: EC-3.1 (angka BPS + verifikasi regulasi, ditunda user), EC-3.2 (bukti timestamp lengkap setelah injeksi), EC-3.3/3.5 (run blind sekali), Go/No-Go menunggu KILL-4/5.

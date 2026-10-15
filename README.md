@@ -135,3 +135,67 @@ Semua ada di [generator/config.py](generator/config.py) dan [generator/reference
 - Tarif iuran PPU 5% (4% + 1%) dan plafon upah Rp12.000.000 (Perpres 64/2020)
 - UMK 2024 per wilayah (perkiraan dari SK Gubernur) dan faktor kenaikan tahunan
 - Pengecualian upah minimum UMKM (PP 36/2021)
+
+## Struktur & cara jalan lokal (v2)
+
+| Folder | Isi |
+|---|---|
+| `api/` | Backend FastAPI (auth, antrean, scan sheet, inspeksi, rescore) |
+| `web/` | Frontend live: HTML/CSS/JS vanilla, di-serve API |
+| `web-static/` | Build read-only untuk GitHub Pages (`scripts/build_static.py`) |
+| `db/migrations/` | Migrasi SQL forward-only `NNN_*.sql` |
+| `scripts/` | Seeder, migrasi, smoke test, build statis, eval |
+| `tests/` | pytest (unit + integrasi ke DB `*_test`) |
+| `design-system/payray/` | `MASTER.md`, acuan tunggal UI |
+| `engine/`, `ml/`, `generator/` | Mesin scan, model, generator data sintetis |
+
+Cara jalan lokal:
+1. `cp .env.example .env`, lalu isi `PAYRAY_NIK_KEY` (≥ 32 byte).
+2. `docker compose up -d` (Postgres 16 di `127.0.0.1:54329`, DB `payray_dev` + `payray_test`). Pakai `127.0.0.1`, bukan `localhost`: di Windows `localhost` resolve ke `::1` dan koneksi menggantung.
+3. `pip install -r requirements.txt`
+4. `python scripts/migrate.py` (forward-only, objek dimiliki `payray_migrator`), lalu `python -m generator --out data --seed 42 --inject-seed 4242`, `scripts/seed.py`, `scripts/seed_users.py`, `scripts/bootstrap_batch.py`.
+5. `uvicorn api.main:app --reload`, buka `http://localhost:8000`.
+
+Aturan agent: [AGENTS.md](AGENTS.md). Rencana: [plankit/PRD.md](plankit/PRD.md).
+
+### Versi terpasang (TC-7)
+
+Diverifikasi 2026-10-14 di venv lokal. Sumber kebenaran: `requirements.txt`.
+
+| Komponen | Versi |
+|---|---|
+| Python | 3.12.4 (image `python:3.12-slim`) |
+| PostgreSQL | 16.15 (`postgres:16`) |
+| fastapi | 0.143.0 |
+| uvicorn | 0.54.0 |
+| psycopg[binary] | 3.3.6 |
+| psycopg-pool | 3.3.3 |
+| numpy | 2.5.4 |
+| pandas | 3.0.6 |
+| scikit-learn | 1.9.1 |
+| scipy | 1.18.1 |
+| pytest | 9.1.1 |
+| httpx | 0.28.1 |
+| ruff | 0.17.0 |
+| mypy | 2.4.0 |
+| pip-audit | 2.10.1 |
+| bandit | 1.9.4 |
+
+`requirements-scrape.txt` hanya untuk scraper portal BPJS, tidak dipakai API.
+
+## Deploy & ukuran (v2)
+
+- API + web live: `render.yaml` (Docker, free plan). Secret di dashboard Render: `DATABASE_URL` (login `payray_app`), `PAYRAY_NIK_KEY`.
+- Pages statis: `.github/workflows/deploy-pages.yml` (manual; tidak otomatis di push agar tidak menimpa dashboard v1). Secret `PAGES_DATABASE_URL` memakai role khusus `payray_pages` (migrasi 007, `scripts/provision_pages_role.py`), bukan owner. Variabel `PAYRAY_LIVE_URL`.
+- Backup: `.github/workflows/backup.yml` harian 02:00 WIB, `pg_dump --format=custom` (client 18), **dienkripsi AES-256 sebelum diunggah** karena repo publik, artefak 7 hari. Secret `BACKUP_DATABASE_URL` dan `BACKUP_PASSPHRASE`.
+- Ukuran terukur lokal (2026-10-14, data dev 5.000 BU, cabang demo 3.137 BU): halaman Pages statis 1.912 KB mentah, **199 KB transfer gzip** (target M-10 ≤ 2 MB); bundle live HTML+CSS+JS tanpa font 25,5 KB gzip (target ≤ 150 KB); font 45 KB (target ≤ 200 KB). Pengukuran DevTools throttling 4G di Pages menunggu deploy pertama.
+- Lokal: `python scripts/dev_server.py` (API sebagai `payray_app`), `python -m http.server 8766 --directory web-static` untuk mode statis.
+
+## Production database (Neon) · 2026-10-14
+
+- Project Neon `payray-healthkathon` (`spring-sea-12428949`), region AWS ap-southeast-1 (Singapore), **Postgres 18** (lokal/CI tetap Postgres 16; SQL kompatibel).
+- Migrasi 001–006 bersih. Seed: 5.000 BU, 269.931 pekerja (NIK HMAC dengan key production terpisah), user demo, batch published kedua cabang, baseline 2026-09 dan 2026-10.
+- **KILL-2 dicek di Neon: LULUS.** `scripts/check_permissions.py`: `payray_officer` dan `payray_scoring` mendapat permission denied di `label.ground_truth` dan `label.inspection_outcome`. Catatan: owner Neon bukan superuser, jadi migrasi 006 memberi `payray_migrator` hak SET ke role operasional.
+- Smoke test API (dijalankan lokal, konek ke Neon sebagai `payray_app`): 5/5 lulus.
+- Render: pembuatan web service ditolak (402, akun perlu kartu pembayaran terdaftar walau paket free). Deploy menunggu.
+- Secret production hanya di `.env` lokal (`NEON_OWNER_URL`, `PROD_DATABASE_URL`, `PROD_NIK_KEY`, `PROD_DEMO_PASSWORD`, `PROD_APP_PASSWORD`), tidak di repo.

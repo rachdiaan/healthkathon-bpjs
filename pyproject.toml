@@ -7,3 +7,19 @@ requires-python = ">=3.10"
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+
+[tool.ruff.lint]
+# Rule default ruff, dipin di repo supaya CI tidak ikut konfigurasi global developer.
+select = ["E4", "E7", "E9", "F"]
+
+[tool.mypy]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# Kode generator v1 tidak diubah di v2 (GR-6); tetap diimpor oleh script seed/injeksi.
+module = ["generator.*"]
+ignore_errors = true
