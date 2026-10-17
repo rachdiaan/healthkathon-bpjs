@@ -5,6 +5,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY api/ api/
 COPY engine/ engine/
+COPY generator/ generator/
 COPY ml/ ml/
 COPY scripts/ scripts/
 COPY db/ db/
