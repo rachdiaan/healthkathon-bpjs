@@ -118,6 +118,63 @@ def get_queue(ctx: Annotated[Ctx, AnyUser], limit: Annotated[int, Query(ge=1, le
     }
 
 
+SUMMARY_SQL = """
+SELECT rs.rank, rs.score, rs.confidence_bucket, rs.reason_codes, rs.rp_low, rs.rp_high, rs.sme_protection,
+       EXISTS (SELECT 1 FROM ops.inspection i WHERE i.employer_id = e.id AND i.status = 'submitted'
+               AND i.period = %(period)s) AS inspected
+FROM core.risk_score rs JOIN core.employer e ON e.id = rs.employer_id
+WHERE rs.batch_id = %(batch_id)s AND e.branch_id = %(branch_id)s
+ORDER BY rs.rank
+"""
+
+
+def summarize(rows: list[dict[str, Any]], band: bool) -> dict[str, Any]:
+    """Agregat batch untuk halaman Ringkasan. Bentuk yang sama dihitung web/static-store.js dari snapshot."""
+    n = len(rows)
+    top = max(1, -(-n // 10)) if n else 0
+    conf = {"tinggi": 0, "sedang": 0, "rendah": 0}
+    codes: dict[str, int] = {}
+    hist = [0] * 10
+    for r in rows:
+        conf[r["confidence_bucket"]] = conf.get(r["confidence_bucket"], 0) + 1
+        hist[min(9, int(r["score"] * 10))] += 1
+        if r["rank"] <= top:
+            for x in r["reasons"][:2]:
+                codes[x["code"]] = codes.get(x["code"], 0) + 1
+
+    def rp_sum(k: int) -> dict[str, int] | None:
+        if band:
+            return None
+        sel = [r for r in rows if r["rank"] <= k]
+        return {"low": sum(r["rp_low"] or 0 for r in sel), "high": sum(r["rp_high"] or 0 for r in sel)}
+
+    return {
+        "n": n, "top_n": top, "confidence": conf, "score_hist": hist,
+        "reason_codes_top": codes,
+        "sme_protection": sum(1 for r in rows if r["sme_protection"]),
+        "verify_first": sum(1 for r in rows if r["sme_protection"] and r["confidence_bucket"] == "rendah"),
+        "inspected": sum(1 for r in rows if r.get("inspected")),
+        "rp_top10": rp_sum(10), "rp_top100": rp_sum(100),
+    }
+
+
+@router.get("/summary")
+def get_summary(ctx: Annotated[Ctx, AnyUser]) -> dict[str, Any]:
+    from api.scan_sheet import rp_mode
+
+    batch = active_batch(ctx.conn, ctx.user.branch_id)
+    if batch is None:
+        return {"batch": None}
+    rows = ctx.conn.execute(SUMMARY_SQL, {"batch_id": batch["id"], "branch_id": ctx.user.branch_id,
+                                          "period": current_period()}).fetchall()
+    data = [{**r, "reasons": r["reason_codes"]} for r in rows]
+    return {
+        "batch": {"id": batch["id"], "period": batch["period"],
+                  "published_at": batch["published_at"].isoformat() if batch["published_at"] else None},
+        **summarize(data, rp_mode() == "band"),
+    }
+
+
 def _safe(v: Any) -> str:
     s = "" if v is None else str(v)
     return "'" + s if s.startswith(FORMULA_PREFIX) else s

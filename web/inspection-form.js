@@ -87,10 +87,10 @@ export function openForm(opts, returnFocus) {
   };
   outcomeGroup.addEventListener("change", syncTypes);
 
-  const save = h("button", { class: "btn btn-primary", type: "submit" }, "Simpan");
-  const cancel = h("button", { class: "btn btn-ghost", type: "button" }, "Batal");
+  const save = h("button", { class: "btn", type: "submit" }, "Simpan");
+  const cancel = h("button", { class: "btn l", type: "button" }, "Batal");
   const formError = h("p", { class: "form-error", role: "alert" });
-  const form = h("form", { class: "inspection-form", novalidate: true },
+  const form = h("form", { novalidate: true },
     h("div", { class: "field" }, h("label", { for: "f-date" }, "Tanggal pemeriksaan"), date,
       h("p", { class: "hint" }, "Hari ini atau maksimal 30 hari ke belakang (WIB)."), errEl("inspected_on")),
     outcomeGroup, typeGroup,
@@ -104,9 +104,9 @@ export function openForm(opts, returnFocus) {
   const panel = h("div", { class: "drawer", role: "dialog", "aria-modal": "true", "aria-labelledby": "drawer-title" },
     h("div", { class: "drawer-head" },
       h("div", {}, h("h2", { id: "drawer-title" }, title),
-        h("p", { class: "muted small" }, `#${opts.rank} · ${opts.employer.name}`)),
-      h("button", { class: "btn btn-ghost", type: "button", "aria-label": "Tutup form", onclick: () => close() }, "Tutup")),
-    opts.supersedeId && !opts.initial && h("p", { class: "notice" }, icon("info"),
+        h("p", { class: "fn" }, `#${opts.rank} · ${opts.employer.name}`)),
+      h("button", { class: "btn l", type: "button", "aria-label": "Tutup form", onclick: () => close() }, "Tutup")),
+    opts.supersedeId && !opts.initial && h("p", { class: "notice" }, icon("info", 16),
       h("span", {}, "Isian lama tidak tersimpan di browser ini. Isi ulang semua field; versi lama tetap tercatat.")),
     form, live);
   const backdrop = h("div", { class: "drawer-backdrop", onclick: () => close() });

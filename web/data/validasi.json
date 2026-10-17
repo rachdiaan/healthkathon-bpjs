@@ -1,0 +1,732 @@
+{
+ "desain": {
+  "label_dari_pemeriksaan": 750,
+  "top_prioritas": 500,
+  "audit_acak": 250,
+  "terbukti": 365,
+  "bobot_audit_ipw": 18.0,
+  "holdout_n": 5000,
+  "holdout_prevalensi": 0.15,
+  "pohon": 250,
+  "fitur": 17,
+  "selisih_ekspor": 2.054519289695911e-06
+ },
+ "perbandingan": {
+  "Acak": {
+   "roc_auc": 0.467982431372549,
+   "pr_auc": 0.14192321487922607,
+   "precision_top": 0.13,
+   "recall_top": 0.08666666666666667,
+   "lift": 0.8666666666666667,
+   "salah_tandai_umkm": 0.10155979202772963,
+   "iuran_per100": 79113087.0,
+   "recall_sulit": 0.07169811320754717,
+   "precision_ci95": [
+    0.102,
+    0.162
+   ],
+   "kurva_precision": [
+    0.1,
+    0.18,
+    0.15333333333333332,
+    0.16,
+    0.148,
+    0.13666666666666666,
+    0.13714285714285715,
+    0.1325,
+    0.13111111111111112,
+    0.13,
+    0.13272727272727272,
+    0.13833333333333334,
+    0.13538461538461538,
+    0.13285714285714287,
+    0.12933333333333333,
+    0.12625,
+    0.12352941176470589,
+    0.12666666666666668,
+    0.12842105263157894,
+    0.129,
+    0.13238095238095238,
+    0.1318181818181818,
+    0.13391304347826086,
+    0.13416666666666666,
+    0.1312,
+    0.13,
+    0.13185185185185186,
+    0.13357142857142856,
+    0.13241379310344828,
+    0.13333333333333333
+   ]
+  },
+  "Aturan + Isolation Forest": {
+   "roc_auc": 0.7830986666666666,
+   "pr_auc": 0.5977612381398767,
+   "precision_top": 0.684,
+   "recall_top": 0.456,
+   "lift": 4.5600000000000005,
+   "salah_tandai_umkm": 0.026689774696707105,
+   "iuran_per100": 7746454540.0,
+   "recall_sulit": 0.13584905660377358,
+   "precision_ci95": [
+    0.63,
+    0.728
+   ],
+   "kurva_precision": [
+    1.0,
+    0.99,
+    0.9866666666666667,
+    0.96,
+    0.9,
+    0.8466666666666667,
+    0.7857142857142857,
+    0.7625,
+    0.72,
+    0.684,
+    0.649090909090909,
+    0.6133333333333333,
+    0.5815384615384616,
+    0.5528571428571428,
+    0.5253333333333333,
+    0.5025,
+    0.48470588235294115,
+    0.4711111111111111,
+    0.4610526315789474,
+    0.449,
+    0.43714285714285717,
+    0.42363636363636364,
+    0.40956521739130436,
+    0.3975,
+    0.388,
+    0.37846153846153846,
+    0.37037037037037035,
+    0.3585714285714286,
+    0.3503448275862069,
+    0.3393333333333333
+   ]
+  },
+  "Model ML (dari hasil pemeriksaan)": {
+   "roc_auc": 0.8242908235294119,
+   "pr_auc": 0.640229457848017,
+   "precision_top": 0.802,
+   "recall_top": 0.5346666666666666,
+   "lift": 5.346666666666668,
+   "salah_tandai_umkm": 0.03050259965337955,
+   "iuran_per100": 5242166701.0,
+   "recall_sulit": 0.1509433962264151,
+   "precision_ci95": [
+    0.748,
+    0.85605
+   ],
+   "kurva_precision": [
+    1.0,
+    0.98,
+    0.9533333333333334,
+    0.965,
+    0.952,
+    0.93,
+    0.8914285714285715,
+    0.875,
+    0.8577777777777778,
+    0.802,
+    0.7636363636363637,
+    0.73,
+    0.6892307692307692,
+    0.6628571428571428,
+    0.632,
+    0.5975,
+    0.5694117647058824,
+    0.5477777777777778,
+    0.5252631578947369,
+    0.502,
+    0.4838095238095238,
+    0.46454545454545454,
+    0.44608695652173913,
+    0.43333333333333335,
+    0.4224,
+    0.4115384615384615,
+    0.3985185185185185,
+    0.38571428571428573,
+    0.38,
+    0.37066666666666664
+   ]
+  },
+  "PayRay gabungan (stacking)": {
+   "roc_auc": 0.837297568627451,
+   "pr_auc": 0.7159738702835802,
+   "precision_top": 0.822,
+   "recall_top": 0.548,
+   "lift": 5.4799999999999995,
+   "salah_tandai_umkm": 0.027383015597920276,
+   "iuran_per100": 5304412842.0,
+   "recall_sulit": 0.15471698113207547,
+   "precision_ci95": [
+    0.772,
+    0.872
+   ],
+   "kurva_precision": [
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    0.988,
+    0.98,
+    0.9542857142857143,
+    0.91,
+    0.8666666666666667,
+    0.822,
+    0.78,
+    0.7433333333333333,
+    0.7092307692307692,
+    0.67,
+    0.6386666666666667,
+    0.6075,
+    0.58,
+    0.5533333333333333,
+    0.531578947368421,
+    0.514,
+    0.5,
+    0.4809090909090909,
+    0.46347826086956523,
+    0.44916666666666666,
+    0.4352,
+    0.41923076923076924,
+    0.4074074074074074,
+    0.3942857142857143,
+    0.3875862068965517,
+    0.378
+   ]
+  },
+  "Gabungan × estimasi Rp (nilai harapan)": {
+   "roc_auc": 0.7503596862745099,
+   "pr_auc": 0.47243504866706343,
+   "precision_top": 0.516,
+   "recall_top": 0.344,
+   "lift": 3.4400000000000004,
+   "salah_tandai_umkm": 0.008318890814558059,
+   "iuran_per100": 17912242244.0,
+   "recall_sulit": 0.1509433962264151,
+   "precision_ci95": [
+    0.46795000000000003,
+    0.5640499999999999
+   ],
+   "kurva_precision": [
+    0.98,
+    0.91,
+    0.8533333333333334,
+    0.79,
+    0.712,
+    0.6566666666666666,
+    0.5971428571428572,
+    0.5575,
+    0.5422222222222223,
+    0.516,
+    0.49454545454545457,
+    0.475,
+    0.4553846153846154,
+    0.44,
+    0.42533333333333334,
+    0.41,
+    0.3952941176470588,
+    0.39,
+    0.38526315789473686,
+    0.373,
+    0.3638095238095238,
+    0.35909090909090907,
+    0.35043478260869565,
+    0.3408333333333333,
+    0.3328,
+    0.3261538461538461,
+    0.3207407407407407,
+    0.31642857142857145,
+    0.30896551724137933,
+    0.306
+   ]
+  }
+ },
+ "kalibrasi": {
+  "brier": 0.07351501230820164,
+  "brier_ml": 0.07415056979126901,
+  "brier_acak": 0.1275,
+  "ece": 0.0347114864674457,
+  "ece_ml": 0.00834635083818321,
+  "reliability": [
+   {
+    "pred": 0.015703729078467014,
+    "obs": 0.058,
+    "n": 500
+   },
+   {
+    "pred": 0.02750599102424523,
+    "obs": 0.036,
+    "n": 500
+   },
+   {
+    "pred": 0.038470052291925926,
+    "obs": 0.038,
+    "n": 500
+   },
+   {
+    "pred": 0.050294821326259995,
+    "obs": 0.052,
+    "n": 500
+   },
+   {
+    "pred": 0.06369085534789068,
+    "obs": 0.056,
+    "n": 500
+   },
+   {
+    "pred": 0.08062777226432273,
+    "obs": 0.06490872210953347,
+    "n": 493
+   },
+   {
+    "pred": 0.10236787723886366,
+    "obs": 0.0611439842209073,
+    "n": 507
+   },
+   {
+    "pred": 0.14112894928848246,
+    "obs": 0.106,
+    "n": 500
+   },
+   {
+    "pred": 0.2533546016914678,
+    "obs": 0.206,
+    "n": 500
+   },
+   {
+    "pred": 0.6753250634891675,
+    "obs": 0.822,
+    "n": 500
+   }
+  ],
+  "reliability_ml": [
+   {
+    "pred": 0.012798349203323131,
+    "obs": 0.008695652173913044,
+    "n": 115
+   },
+   {
+    "pred": 0.0528053942247329,
+    "obs": 0.05624809972636059,
+    "n": 3289
+   },
+   {
+    "pred": 0.11314350439660197,
+    "obs": 0.10779816513761468,
+    "n": 872
+   },
+   {
+    "pred": 0.6142600140830891,
+    "obs": 0.649171270718232,
+    "n": 724
+   }
+  ]
+ },
+ "kesepakatan": {
+  "Keduanya menandai": {
+   "n": 327,
+   "precision": 0.9510703363914373
+  },
+  "Hanya aturan": {
+   "n": 173,
+   "precision": 0.1791907514450867
+  },
+  "Hanya ML": {
+   "n": 173,
+   "precision": 0.5202312138728323
+  }
+ },
+ "learning_curve": [
+  {
+   "n_label": 150,
+   "pr_auc": 0.5890293583586084,
+   "pr_auc_sd": 0.02747193183880572,
+   "precision_top": 0.6912
+  },
+  {
+   "n_label": 300,
+   "pr_auc": 0.640386716260241,
+   "pr_auc_sd": 0.0630942664641417,
+   "precision_top": 0.7724
+  },
+  {
+   "n_label": 450,
+   "pr_auc": 0.683403059409218,
+   "pr_auc_sd": 0.012194115562816292,
+   "precision_top": 0.7888000000000002
+  },
+  {
+   "n_label": 600,
+   "pr_auc": 0.6953377346578883,
+   "pr_auc_sd": 0.0029083028579815072,
+   "precision_top": 0.8068000000000002
+  },
+  {
+   "n_label": 750,
+   "pr_auc": 0.7006512905983627,
+   "pr_auc_sd": 0.0,
+   "precision_top": 0.814
+  }
+ ],
+ "stabilitas": {
+  "precision_mean": 0.7794000000000001,
+  "precision_sd": 0.03345504446268159,
+  "jaccard_mean": 0.7068435347788533
+ },
+ "importance": [
+  {
+   "fitur": "Porsi upah tidak naik",
+   "kolom": "porsi_upah_beku",
+   "permutation": 0.228725933958831,
+   "permutation_sd": 0.008122038628455258,
+   "kontribusi": 1.4569948374283201
+  },
+  {
+   "fitur": "Pekerja terdaftar / rencana OSS",
+   "kolom": "rasio_headcount_oss",
+   "permutation": 0.1645930510002999,
+   "permutation_sd": 0.004866883469809637,
+   "kontribusi": 1.3128424220421997
+  },
+  {
+   "fitur": "Pekerja pindah PPU→PBPU (klaster)",
+   "kolom": "klaster_pbpu_n",
+   "permutation": 0.08489286018212505,
+   "permutation_sd": 0.004207268940026129,
+   "kontribusi": 0.7932118966497362
+  },
+  {
+   "fitur": "Rencana tenaga kerja OSS",
+   "kolom": "tk_oss",
+   "permutation": 0.07069076177028562,
+   "permutation_sd": 0.007061028660051351,
+   "kontribusi": 0.865684743283488
+  },
+  {
+   "fitur": "Porsi kenaikan = kenaikan UMK",
+   "kolom": "porsi_naik_sama_umk",
+   "permutation": 0.05082070745962908,
+   "permutation_sd": 0.003515146553143733,
+   "kontribusi": 0.61059697822732
+  },
+  {
+   "fitur": "Porsi upah seragam",
+   "kolom": "porsi_upah_modus",
+   "permutation": 0.03230741578256382,
+   "permutation_sd": 0.00485983873313385,
+   "kontribusi": 0.5822020463352399
+  },
+  {
+   "fitur": "Pekerja dilaporkan",
+   "kolom": "n_pekerja",
+   "permutation": 0.029581619070469987,
+   "permutation_sd": 0.002577916973471741,
+   "kontribusi": 0.5622919176568761
+  },
+  {
+   "fitur": "Porsi pekerja pindah ke PBPU",
+   "kolom": "klaster_pbpu_porsi",
+   "permutation": 0.023031382309618563,
+   "permutation_sd": 0.0016139107496689162,
+   "kontribusi": 0.37765847911819994
+  },
+  {
+   "fitur": "Porsi pekerja di atas UMK",
+   "kolom": "porsi_atas_umk",
+   "permutation": 0.013709049054912081,
+   "permutation_sd": 0.0008227644304691536,
+   "kontribusi": 0.45260070717804013
+  },
+  {
+   "fitur": "Upah vs benchmark sektor",
+   "kolom": "rasio_benchmark",
+   "permutation": 0.009599130078310947,
+   "permutation_sd": 0.0009242998061895883,
+   "kontribusi": 0.5712735531162
+  },
+  {
+   "fitur": "Skala usaha (0 mikro … 3 besar)",
+   "kolom": "skala",
+   "permutation": 0.0020802506447624935,
+   "permutation_sd": 0.00047835847988889746,
+   "kontribusi": 0.0706429989652
+  },
+  {
+   "fitur": "Tahun data teramati",
+   "kolom": "tahun_teramati",
+   "permutation": 0.0007644955140112986,
+   "permutation_sd": 0.0015278951300246508,
+   "kontribusi": 0.06972226520428
+  },
+  {
+   "fitur": "Porsi pekerja tepat di UMK",
+   "kolom": "porsi_tepat_umk",
+   "permutation": 0.0004637274274511105,
+   "permutation_sd": 0.0013421930143749235,
+   "kontribusi": 0.30444201767874
+  },
+  {
+   "fitur": "Sektor padat karya",
+   "kolom": "padat_karya",
+   "permutation": 4.367607163568987e-05,
+   "permutation_sd": 8.797078760186224e-05,
+   "kontribusi": 0.013188626692000003
+  },
+  {
+   "fitur": "Upah P90 / UMK",
+   "kolom": "p90_rasio_umk",
+   "permutation": -0.002625936946118146,
+   "permutation_sd": 0.0016506064614973891,
+   "kontribusi": 0.37817624714784004
+  },
+  {
+   "fitur": "Median upah / UMK",
+   "kolom": "median_rasio_umk",
+   "permutation": -0.0028471268375120707,
+   "permutation_sd": 0.0009438273419942931,
+   "kontribusi": 0.3708153667281399
+  },
+  {
+   "fitur": "Porsi pekerja di bawah UMK",
+   "kolom": "porsi_bawah_umk",
+   "permutation": -0.005960541230798988,
+   "permutation_sd": 0.0022556777098439685,
+   "kontribusi": 0.2025910300388
+  }
+ ],
+ "fairness": [
+  {
+   "skala": "mikro",
+   "n": 1741,
+   "precision": 0.6906077348066298,
+   "recall": 0.4770992366412214,
+   "salah_tandai": 0.03786342123056119
+  },
+  {
+   "skala": "kecil",
+   "n": 1661,
+   "precision": 0.8606060606060606,
+   "recall": 0.5568627450980392,
+   "salah_tandai": 0.016358463726884778
+  },
+  {
+   "skala": "menengah",
+   "n": 1143,
+   "precision": 0.9298245614035088,
+   "recall": 0.6162790697674418,
+   "salah_tandai": 0.008238928939237899
+  },
+  {
+   "skala": "besar",
+   "n": 455,
+   "precision": 0.95,
+   "recall": 0.6229508196721312,
+   "salah_tandai": 0.005076142131979695
+  }
+ ],
+ "drift": [
+  {
+   "fitur": "Upah vs benchmark sektor",
+   "psi": 0.01541740619396849
+  },
+  {
+   "fitur": "Porsi pekerja di atas UMK",
+   "psi": 0.010032375536224191
+  },
+  {
+   "fitur": "Porsi pekerja di bawah UMK",
+   "psi": 0.007681765711928928
+  },
+  {
+   "fitur": "Upah P90 / UMK",
+   "psi": 0.007036256683469741
+  },
+  {
+   "fitur": "Pekerja dilaporkan",
+   "psi": 0.006334700768645711
+  },
+  {
+   "fitur": "Median upah / UMK",
+   "psi": 0.006254895103791122
+  },
+  {
+   "fitur": "Rencana tenaga kerja OSS",
+   "psi": 0.0053948872822265435
+  },
+  {
+   "fitur": "Porsi upah tidak naik",
+   "psi": 0.003181539432337648
+  },
+  {
+   "fitur": "Skala usaha (0 mikro … 3 besar)",
+   "psi": 0.002581169532048033
+  },
+  {
+   "fitur": "Porsi pekerja pindah ke PBPU",
+   "psi": 0.0022167980814706166
+  },
+  {
+   "fitur": "Pekerja terdaftar / rencana OSS",
+   "psi": 0.0021961228819447906
+  },
+  {
+   "fitur": "Porsi pekerja tepat di UMK",
+   "psi": 0.002155362087114426
+  },
+  {
+   "fitur": "Porsi kenaikan = kenaikan UMK",
+   "psi": 0.001053642994878594
+  },
+  {
+   "fitur": "Porsi upah seragam",
+   "psi": 0.0008683781045777702
+  },
+  {
+   "fitur": "Pekerja pindah PPU→PBPU (klaster)",
+   "psi": 4.182178591728616e-05
+  },
+  {
+   "fitur": "Tahun data teramati",
+   "psi": 0.0
+  },
+  {
+   "fitur": "Sektor padat karya",
+   "psi": 0.0
+  }
+ ],
+ "rupiah": {
+  "target_coverage": 0.8,
+  "n_train": 255,
+  "n_kalibrasi": 110,
+  "coverage_holdout": 0.8418491484184915,
+  "n_holdout": 411,
+  "lebar_median_rasio": 2.758199395286788,
+  "korelasi_log_kalkulator": 0.4578947696089587,
+  "korelasi_log_ml": 0.8378241128373224,
+  "mape_median_kalkulator": 0.7765924025136186,
+  "mape_median_ml": 0.40398728270187684
+ },
+ "kualitas_data": [
+  {
+   "nama": "Skema kolom wajib",
+   "status": "lulus",
+   "temuan": "23 kolom di 4 tabel lengkap",
+   "n": 0,
+   "total": 23
+  },
+  {
+   "nama": "ID badan usaha unik",
+   "status": "lulus",
+   "temuan": "0 dari 5.000 baris",
+   "n": 0,
+   "total": 5000
+  },
+  {
+   "nama": "ID pekerja unik per badan usaha",
+   "status": "lulus",
+   "temuan": "0 dari 450.341 baris",
+   "n": 0,
+   "total": 450341
+  },
+  {
+   "nama": "Nilai kosong di kolom kunci",
+   "status": "lulus",
+   "temuan": "0 dari 2.413.044 baris",
+   "n": 0,
+   "total": 2413044
+  },
+  {
+   "nama": "Pekerja → badan usaha terdaftar (referential integrity)",
+   "status": "lulus",
+   "temuan": "0 dari 450.341 baris",
+   "n": 0,
+   "total": 450341
+  },
+  {
+   "nama": "Riwayat upah → pekerja terdaftar",
+   "status": "lulus",
+   "temuan": "0 dari 1.279.728 baris",
+   "n": 0,
+   "total": 1279728
+  },
+  {
+   "nama": "Mutasi → pekerja terdaftar",
+   "status": "lulus",
+   "temuan": "0 dari 677.975 baris",
+   "n": 0,
+   "total": 677975
+  },
+  {
+   "nama": "Upah dilaporkan > 0",
+   "status": "lulus",
+   "temuan": "0 dari 1.279.728 baris",
+   "n": 0,
+   "total": 1279728
+  },
+  {
+   "nama": "Bulan aktif dalam 1–12",
+   "status": "lulus",
+   "temuan": "0 dari 1.279.728 baris",
+   "n": 0,
+   "total": 1279728
+  },
+  {
+   "nama": "Duplikat upah (pekerja, badan usaha, tahun)",
+   "status": "lulus",
+   "temuan": "0 dari 1.279.728 baris",
+   "n": 0,
+   "total": 1279728
+  },
+  {
+   "nama": "Tanggal keluar ≥ tanggal masuk",
+   "status": "lulus",
+   "temuan": "0 dari 450.341 baris",
+   "n": 0,
+   "total": 450341
+  },
+  {
+   "nama": "Usia saat masuk kerja 15–70 tahun",
+   "status": "lulus",
+   "temuan": "0 dari 450.341 baris",
+   "n": 0,
+   "total": 450341
+  },
+  {
+   "nama": "Wilayah ada di tabel UMK",
+   "status": "lulus",
+   "temuan": "0 dari 5.000 baris",
+   "n": 0,
+   "total": 5000
+  },
+  {
+   "nama": "KBLI ada di tabel sektor",
+   "status": "lulus",
+   "temuan": "0 dari 5.000 baris",
+   "n": 0,
+   "total": 5000
+  },
+  {
+   "nama": "UMK tersedia untuk setiap tahun upah",
+   "status": "lulus",
+   "temuan": "0 dari 1.279.728 baris",
+   "n": 0,
+   "total": 1279728
+  },
+  {
+   "nama": "Upah ekstrem (> 40× UMK)",
+   "status": "lulus",
+   "temuan": "0 dari 1.279.728 baris · bisa direksi/eksekutif sah; tidak memengaruhi iuran karena plafon Rp12 jt",
+   "n": 0,
+   "total": 1279728
+  },
+  {
+   "nama": "Tahun berdiri ≤ tahun data",
+   "status": "lulus",
+   "temuan": "0 dari 5.000 baris",
+   "n": 0,
+   "total": 5000
+  }
+ ]
+}

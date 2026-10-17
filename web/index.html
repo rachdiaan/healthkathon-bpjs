@@ -2,18 +2,21 @@
 <html lang="id">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>PayRay · Prioritas pemeriksaan</title>
-  <link rel="preload" href="fonts/source-sans-3-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <meta name="description" content="PayRay: skor risiko kepatuhan iuran JKN pemberi kerja. Prioritas pemeriksaan, bukan tuduhan.">
+  <link rel="preload" href="fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="tokens.css">
   <link rel="stylesheet" href="base.css">
   <link rel="stylesheet" href="app.css">
 </head>
 <body>
   <a class="skip" href="#main">Lewati ke konten</a>
+  <header id="topbar" class="tb" hidden></header>
+  <nav id="rail" class="rail" aria-label="Menu utama" hidden></nav>
   <div id="banner"></div>
-  <header id="topbar" hidden></header>
   <main id="main" tabindex="-1"></main>
+  <aside id="dr" role="dialog" aria-modal="false" aria-live="polite"></aside>
   <div id="toast" role="status" aria-live="polite"></div>
   <script type="module" src="app.js"></script>
 </body>

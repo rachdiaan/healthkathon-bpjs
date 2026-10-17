@@ -1,35 +1,24 @@
-/* Token desain PayRay. Sumber: plankit/tokens.json = design-system/payray/MASTER.md. Jangan ubah tanpa MASTER.md. */
+/* Token desain PayRay v3 (gaya konsol Meridian). Acuan: design-system/payray/MASTER.md. */
 :root {
-  --color-bg: #0B0F14;
-  --color-surface: #141B23;
-  --color-text: #E8EEF2;
-  --color-muted: #9AA7B2;
-  --color-primary: #C6F432;
-  --color-on-primary: #0B0F14;
-  --color-border: #27323D;
-  --color-warning: #F2B84B;
-  --color-danger: #FF7A6B;
-  --color-info: #6CC9E8;
-  --font-heading: "Montserrat";
-  --font-body: "Source Sans 3";
-  --text-sm: 14px;
-  --text-base: 16px;
-  --text-lg: 20px;
-  --text-xl: 28px;
-  --text-display: 40px;
-  --weight-regular: 400;
-  --weight-bold: 700;
-  --leading-tight: 1.2;
-  --leading-normal: 1.5;
-  --space-xs: 4px;
-  --space-sm: 8px;
-  --space-md: 16px;
-  --space-lg: 24px;
-  --space-xl: 32px;
-  --space-2xl: 48px;
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 16px;
-  --font-stack-heading: "Montserrat", system-ui, sans-serif;
-  --font-stack-body: "Source Sans 3", system-ui, sans-serif;
+  --bg: #f1f1f1; --sf: #fff; --ink: #111; --mu: #6f6f6f; --ln: #ececec; --hv: #f4f4f4;
+  --pb: #111; --pf: #fff; --s1: #111; --s2: #6b6b6b; --s3: #c4c4c4; --sa: #d97706;
+  --gn: #17794a; --gt: #e3f4eb; --am: #a8500a; --at: #fdecd7; --rd: #b42318; --rt: #fde8e6;
+  --shadow: 0 8px 40px rgba(0, 0, 0, .18);
+  --r-card: 20px; --r-ctl: 12px;
+  --font: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0c0c0c; --sf: #171717; --ink: #f2f2f2; --mu: #949494; --ln: #272727; --hv: #212121;
+    --pb: #f2f2f2; --pf: #111; --s1: #f2f2f2; --s2: #8c8c8c; --s3: #4a4a4a; --sa: #f0a04b;
+    --gn: #5fd49a; --gt: #12301f; --am: #f0a35e; --at: #3a2410; --rd: #ff8a7a; --rt: #3a1512;
+    --shadow: 0 8px 40px rgba(0, 0, 0, .55); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0c0c0c; --sf: #171717; --ink: #f2f2f2; --mu: #949494; --ln: #272727; --hv: #212121;
+  --pb: #f2f2f2; --pf: #111; --s1: #f2f2f2; --s2: #8c8c8c; --s3: #4a4a4a; --sa: #f0a04b;
+  --gn: #5fd49a; --gt: #12301f; --am: #f0a35e; --at: #3a2410; --rd: #ff8a7a; --rt: #3a1512;
+  --shadow: 0 8px 40px rgba(0, 0, 0, .55); color-scheme: dark;
 }

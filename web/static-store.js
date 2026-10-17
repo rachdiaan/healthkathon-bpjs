@@ -84,12 +84,32 @@ export async function handle(path, { method = "GET", body } = {}) {
     if (!d) throw new ApiError(404, { error: { message: `Mode statis hanya memuat detail ${s.detail_top} BU teratas. Buka versi live untuk BU ini.` } });
     return { ...d, inspection_status: inspectedIds(wibMonth()).has(d.employer.id) ? "submitted" : "none" };
   }
+  if (p === "/summary") return summarize(s);
   if (p === "/inspections" && method === "POST") return saveInspection(body);
   const sup = p.match(/^\/inspections\/(\d+)\/supersede$/);
   if (sup && method === "POST") return saveInspection(body, Number(sup[1]));
   if (p === "/inspections/mine") return { items: localInspections() };
   if (p === "/auth/logout") return { ok: true };
   throw new ApiError(404, { error: { message: "Fitur ini hanya ada di versi live." } });
+}
+
+// Bentuk sama dengan api/queue.py summarize(); snapshot memuat semua BU cabang.
+function summarize(s) {
+  const items = s.items, n = items.length, top = n ? Math.ceil(n / 10) : 0;
+  const done = inspectedIds(wibMonth());
+  const confidence = { tinggi: 0, sedang: 0, rendah: 0 }, codes = {}, hist = Array(10).fill(0);
+  for (const it of items) {
+    confidence[it.confidence_bucket] = (confidence[it.confidence_bucket] || 0) + 1;
+    hist[Math.min(9, Math.floor(it.score * 10))] += 1;
+    if (it.rank <= top) for (const r of it.reasons.slice(0, 2)) codes[r.code] = (codes[r.code] || 0) + 1;
+  }
+  const band = items.some((i) => i.rp_low === null);
+  const rpSum = (k) => band ? null : items.filter((i) => i.rank <= k)
+    .reduce((a, i) => ({ low: a.low + (i.rp_low || 0), high: a.high + (i.rp_high || 0) }), { low: 0, high: 0 });
+  return { batch: { id: s.batch.id, period: s.batch.period, published_at: s.batch.published_at },
+    n, top_n: top, confidence, score_hist: hist, reason_codes_top: codes,
+    sme_protection: items.filter((i) => i.sme_protection).length, verify_first: items.filter((i) => i.verify_first).length,
+    inspected: items.filter((i) => done.has(i.employer_id)).length, rp_top10: rpSum(10), rp_top100: rpSum(100) };
 }
 
 // CSV inspeksi lokal (fungsi lama dashboard dipertahankan), dengan sanitasi formula yang sama dengan server.
@@ -113,8 +133,8 @@ export function exportCsv() {
 
 export function staticHistoryActions(rerender) {
   return [
-    h("button", { class: "btn btn-ghost", type: "button", onclick: exportCsv }, "Ekspor CSV"),
-    h("button", { class: "btn btn-danger", type: "button", onclick: () => {
+    h("button", { class: "btn l", type: "button", onclick: exportCsv }, "Ekspor CSV"),
+    h("button", { class: "btn dg", type: "button", onclick: () => {
       if (!window.confirm("Hapus semua data inspeksi yang tersimpan di browser ini?")) return;
       try { localStorage.removeItem(KEY); localStorage.removeItem("payray.inspection.copy"); } catch { /* abaikan */ }
       toast("Data lokal dihapus");
