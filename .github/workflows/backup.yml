@@ -12,6 +12,10 @@ permissions:
 jobs:
   pg_dump:
     runs-on: ubuntu-latest
+    env:
+      # /usr/bin/pg_dump adalah pg_wrapper Debian: ia memilih versi cluster PG16 bawaan image runner, bukan client 18.
+      # Panggil biner 18 lewat path eksplisit.
+      PG_BIN: /usr/lib/postgresql/18/bin
     steps:
       - name: Install pg_dump 18 (server Neon = PG18; pg_dump menolak server yang lebih baru dari clientnya)
         run: |
@@ -20,7 +24,8 @@ jobs:
           echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
           sudo apt-get update -q
           sudo apt-get install -y -q postgresql-client-18
-          pg_dump --version
+          "$PG_BIN/pg_dump" --version
+          "$PG_BIN/pg_dump" --version | grep -qE ' 18\.' || { echo "pg_dump bukan versi 18"; exit 1; }
       - name: Dump + enkripsi
         # Repo ini publik: artefak Actions bisa diunduh pengguna GitHub mana pun. Dump berisi ground truth label
         # dan hash password, jadi WAJIB dienkripsi (AES-256, PBKDF2) sebelum diunggah. Hanya file .enc yang diunggah.
@@ -32,7 +37,7 @@ jobs:
             echo "Secret BACKUP_DATABASE_URL dan BACKUP_PASSPHRASE wajib diisi"; exit 1
           fi
           stamp="$(date -u +%Y%m%dT%H%MZ)"
-          pg_dump --format=custom --no-owner --file "payray-$stamp.dump" "$BACKUP_DATABASE_URL"
+          "$PG_BIN/pg_dump" --format=custom --no-owner --file "payray-$stamp.dump" "$BACKUP_DATABASE_URL"
           openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -pass env:BACKUP_PASSPHRASE             -in "payray-$stamp.dump" -out "payray-$stamp.dump.enc"
           rm -f "payray-$stamp.dump"
           ls -l *.enc
