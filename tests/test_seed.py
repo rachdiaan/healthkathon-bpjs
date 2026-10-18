@@ -52,3 +52,17 @@ def test_password_hash_is_scrypt(seeded_db: str) -> None:
         rows = dict(conn.execute("SELECT username, password_hash FROM ops.app_user").fetchall())
         assert {"officer1", "supervisor1", "officer2", "supervisor2"} <= set(rows)
         assert all(h.startswith("scrypt$") for h in rows.values())
+
+
+def test_visitor_account_is_branch1_officer(seeded_db: str, client, admin) -> None:
+    """Akun tamu "pengunjung": password sendiri, peran petugas cabang 1, tanpa akses supervisor."""
+    from conftest import login
+    from scripts.seed_users import seed_visitor
+
+    seed_visitor(seeded_db, "tamu-password-456")
+    assert not seed_visitor(seeded_db, "tamu-password-456")  # idempoten
+    admin.execute("DELETE FROM ops.login_attempt")
+    assert login(client, "pengunjung", "tamu-password-456").status_code == 200
+    me = client.get("/api/me").json()
+    assert (me["role"], me["branch_id"]) == ("officer", 1)
+    assert client.get("/api/rescore-batches").status_code == 403
