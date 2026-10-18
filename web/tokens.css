@@ -1,24 +1,28 @@
-/* Token desain PayRay v3 (gaya konsol Meridian). Acuan: design-system/payray/MASTER.md. */
+/* Token desain PayRay v3.1: tata letak konsol Meridian, palet Kemenkes. Acuan: design-system/payray/MASTER.md.
+   Palet: Pedoman Identitas Kemenkes (Kepmenkes HK.01.07/MENKES/5/2024) hanya memberi CMYK:
+   turqoise gelap C75 Y45, hijau kuning C20 Y100, turqoise medium C74 Y21, abu-abu C58 M50 Y51 K19.
+   Nilai layar di bawah disesuaikan untuk kontras WCAG AA; turqoise gelap #047D78 sama dengan situs kemkes.go.id. */
 :root {
-  --bg: #f1f1f1; --sf: #fff; --ink: #111; --mu: #6f6f6f; --ln: #ececec; --hv: #f4f4f4;
-  --pb: #111; --pf: #fff; --s1: #111; --s2: #6b6b6b; --s3: #c4c4c4; --sa: #d97706;
+  --bg: #eef3f2; --sf: #fff; --ink: #0f1f1e; --mu: #5a6967; --ln: #e1e9e8; --hv: #f0f5f4;
+  --pb: #047d78; --pf: #fff; --s1: #047d78; --s2: #2bb0bf; --s3: #b9d3d0; --sa: #c3d400;
   --gn: #17794a; --gt: #e3f4eb; --am: #a8500a; --at: #fdecd7; --rd: #b42318; --rt: #fde8e6;
-  --shadow: 0 8px 40px rgba(0, 0, 0, .18);
+  --on-sa: #1c2400;
+  --shadow: 0 8px 40px rgba(4, 60, 58, .16);
   --r-card: 20px; --r-ctl: 12px;
   --font: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0c0c0c; --sf: #171717; --ink: #f2f2f2; --mu: #949494; --ln: #272727; --hv: #212121;
-    --pb: #f2f2f2; --pf: #111; --s1: #f2f2f2; --s2: #8c8c8c; --s3: #4a4a4a; --sa: #f0a04b;
+    --bg: #0a1413; --sf: #111d1c; --ink: #eef5f4; --mu: #93a3a1; --ln: #22302f; --hv: #1a2726;
+    --pb: #2fc0b4; --pf: #04201e; --s1: #2fc0b4; --s2: #1d8f99; --s3: #33504d; --sa: #c9d93a;
     --gn: #5fd49a; --gt: #12301f; --am: #f0a35e; --at: #3a2410; --rd: #ff8a7a; --rt: #3a1512;
     --shadow: 0 8px 40px rgba(0, 0, 0, .55); color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #0c0c0c; --sf: #171717; --ink: #f2f2f2; --mu: #949494; --ln: #272727; --hv: #212121;
-  --pb: #f2f2f2; --pf: #111; --s1: #f2f2f2; --s2: #8c8c8c; --s3: #4a4a4a; --sa: #f0a04b;
+  --bg: #0a1413; --sf: #111d1c; --ink: #eef5f4; --mu: #93a3a1; --ln: #22302f; --hv: #1a2726;
+  --pb: #2fc0b4; --pf: #04201e; --s1: #2fc0b4; --s2: #1d8f99; --s3: #33504d; --sa: #c9d93a;
   --gn: #5fd49a; --gt: #12301f; --am: #f0a35e; --at: #3a2410; --rd: #ff8a7a; --rt: #3a1512;
   --shadow: 0 8px 40px rgba(0, 0, 0, .55); color-scheme: dark;
 }
