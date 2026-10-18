@@ -89,6 +89,7 @@ button.hb:hover span:first-child { text-decoration: underline; }
 .sg { display: flex; height: 64px; gap: 4px; margin-bottom: 16px; }
 .sg button { border: 0; border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; justify-content: space-between; text-align: left; min-width: 0; opacity: .55; color: var(--sf); }
 .sg button.dk { color: var(--ink); }
+.sg button.fa { color: var(--on-sa); }
 .sg button[aria-pressed="true"] { opacity: 1; box-shadow: 0 0 0 2px var(--sf), 0 0 0 4px var(--ink); }
 .sg b { font-size: 20px; line-height: 1; }
 .sg span { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
