@@ -1,5 +1,7 @@
 # PayRay Design System: MASTER
 
+> **Revisi v3 (2026-10-17): gaya konsol Meridian menggantikan "dark x-ray".** Acuan visual utama sekarang konsol Meridian: netral monokrom (terang + gelap, toggle di topbar), aksen amber `--sa` dan hijau `--gn`, kartu radius 20px, rail ikon kiri (bar bawah di < 1000px), font Inter (self-hosted, variable). Pola inti: badge kepastian angka (● Data batch, ◐ Hasil hitungan, ○ Perkiraan) dan drawer "asal angka" (berdasarkan apa, cara menghitung, kapan bisa meleset, yang boleh diputuskan). Token aktif ada di `web/tokens.css`; komponen di `web/ui.js`. Bagian di bawah ini (token v2) hanya arsip; prinsip produk "mengurutkan, bukan menuduh" tetap berlaku. Batasan teknis tetap: tanpa `innerHTML` (GR-14), tanpa atribut `style` (CSP `style-src 'self'`, pakai CSSOM lewat `h(..., { style: {...} })`).
+
 Acuan tunggal UI PayRay v2 (PRD §12). Nilai token di sini identik dengan `plankit/tokens.json` dan `web/tokens.css`. Ubah token hanya lewat file ini, lalu salin ke `web/tokens.css`.
 
 ## Kategori & arah

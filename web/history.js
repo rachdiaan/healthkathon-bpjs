@@ -3,11 +3,12 @@ import { api, MODE } from "./api.js";
 import { h, clear, icon } from "./dom.js";
 import { toast } from "./app.js";
 import { openForm, loadCopy } from "./inspection-form.js";
+import { card, labelRows, kpi } from "./ui.js";
 
 const STATUS = {
-  submitted: ["Tersimpan", "done"],
-  superseded: ["Dikoreksi (versi lama)", "muted"],
-  cancelled: ["Dibatalkan supervisor", "warn"],
+  submitted: ["Tersimpan", "g"],
+  superseded: ["Dikoreksi (versi lama)", ""],
+  cancelled: ["Dibatalkan supervisor", "a"],
 };
 
 const showCorrections = { value: false };
@@ -25,34 +26,40 @@ export async function renderHistory(main) {
   document.title = "Riwayat Saya · PayRay";
   const toggle = h("input", { type: "checkbox", id: "show-corr", checked: showCorrections.value });
   const tbody = h("tbody", {});
-  const extra = h("div", { class: "actions" });
-  main.append(
-    h("div", { class: "page-head" },
-      h("div", {}, h("h1", {}, "Riwayat Saya"),
-        h("p", { class: "muted" }, "Inspeksi yang Anda catat. Hasil (outcome) tidak ditampilkan di sini; supervisor yang membacanya.")),
-      h("div", { class: "actions" },
-        h("label", { class: "radio", for: "show-corr" }, toggle, h("span", {}, "Tampilkan koreksi")), extra)),
-    h("div", { class: "table-wrap" },
-      h("table", { class: "data history" },
-        h("caption", { class: "visually-hidden" }, "Riwayat inspeksi saya"),
-        h("thead", {}, h("tr", {}, ["Tanggal", "BU", "Rank saat dipilih", "Status", "Aksi"].map((t) => h("th", { scope: "col" }, t)))),
-        tbody)));
+  const tbl = h("table", { class: "rsp" },
+    h("caption", { class: "visually-hidden" }, "Riwayat inspeksi saya"),
+    h("thead", {}, h("tr", {}, ["Tanggal", "Badan usaha", "Rank saat dipilih", "Status", "Aksi"].map((t) => h("th", { scope: "col" }, t)))),
+    tbody);
+  const stats = h("div", { class: "row4" });
+  const extra = [h("label", { class: "radio", for: "show-corr" }, toggle, h("span", {}, "Tampilkan koreksi"))];
+  if (MODE === "static") {
+    const { staticHistoryActions } = await import("./static-store.js");
+    extra.push(...staticHistoryActions(() => renderHistory(main)));
+  }
+  main.append(stats,
+    card("Inspeksi yang Anda catat", [h("div", { class: "tw" }, tbl),
+      h("p", { class: "fn", style: { marginTop: "12px" } }, "Hasil (outcome) tidak ditampilkan di sini; supervisor yang membacanya. Koreksi bisa dilakukan sampai 7 hari setelah dicatat.")], extra));
 
   let items = [];
   const paint = () => {
+    clear(stats).append(
+      kpi("Inspeksi tersimpan", items.filter((i) => i.status === "submitted").length.toLocaleString("id-ID"), "m", "versi terbaru tiap BU"),
+      kpi("Masih bisa dikoreksi", items.filter((i) => i.can_correct).length.toLocaleString("id-ID"), "m", "batas 7 hari"),
+      kpi("Sudah dikoreksi", items.filter((i) => i.status === "superseded").length.toLocaleString("id-ID"), "m", "versi lama tetap tercatat"),
+      kpi("Dibatalkan supervisor", items.filter((i) => i.status === "cancelled").length.toLocaleString("id-ID"), "m", "dengan alasan tertulis"));
     clear(tbody);
     const visible = items.filter((it) => showCorrections.value || it.status !== "superseded");
     if (!visible.length) {
       tbody.append(h("tr", {}, h("td", { colspan: 5, class: "empty" },
         h("strong", {}, "Belum ada inspeksi tercatat."),
-        h("span", { class: "muted" }, "Buka BU dari antrean, lalu pilih “Catat hasil inspeksi”."))));
+        "Buka BU dari antrean, lalu pilih “Catat hasil inspeksi”.")));
       return;
     }
     for (const it of visible) {
       const [label, cls] = STATUS[it.status] || [it.status, ""];
       const actions = [];
       if (it.can_correct) {
-        const btn = h("button", { class: "btn btn-ghost", type: "button" }, "Koreksi");
+        const btn = h("button", { class: "btn l", type: "button" }, "Koreksi");
         btn.addEventListener("click", () => openForm({
           employer: { id: it.employer_id, name: it.employer_name }, rank: it.rank_at_selection,
           supersedeId: it.id,
@@ -62,22 +69,18 @@ export async function renderHistory(main) {
         actions.push(btn);
       }
       tbody.append(h("tr", {},
-        h("td", { "data-label": "Tanggal" }, fmtDate(it.inspected_on)),
-        h("td", { "data-label": "BU" }, h("a", { href: `#/bu/${it.employer_id}`, class: "bu-name" }, it.employer_name)),
-        h("td", { "data-label": "Rank saat dipilih", class: "num" }, `#${it.rank_at_selection}`),
-        h("td", { "data-label": "Status" },
-          h("span", { class: `status ${cls}` }, it.status === "submitted" ? icon("check") : null, label),
-          it.status === "cancelled" && it.cancel_reason && h("span", { class: "muted small block" }, `Alasan: ${it.cancel_reason}`)),
-        h("td", { "data-label": "Aksi" }, actions.length ? actions : h("span", { class: "muted small" }, it.status === "submitted" ? "Batas koreksi lewat" : "-"))));
+        h("td", {}, fmtDate(it.inspected_on)),
+        h("td", {}, h("a", { href: `#/bu/${it.employer_id}`, class: "nm" }, it.employer_name)),
+        h("td", {}, `#${it.rank_at_selection}`),
+        h("td", {}, h("span", { class: `b ${cls}` }, it.status === "submitted" ? icon("check") : null, label),
+          it.status === "cancelled" && it.cancel_reason && h("small", {}, `Alasan: ${it.cancel_reason}`)),
+        h("td", {}, actions.length ? actions : h("span", { class: "fn" }, it.status === "submitted" ? "Batas koreksi lewat" : "-"))));
     }
+    labelRows(tbl);
   };
   toggle.addEventListener("change", () => { showCorrections.value = toggle.checked; paint(); });
 
-  if (MODE === "static") {
-    const { staticHistoryActions } = await import("./static-store.js");
-    extra.append(...staticHistoryActions(() => renderHistory(main)));
-  }
-  tbody.append(h("tr", { class: "skeleton", "aria-hidden": "true" }, Array.from({ length: 5 }, () => h("td", {}, h("span", { class: "sk" })))));
+  tbody.append(h("tr", { "aria-hidden": "true" }, Array.from({ length: 5 }, () => h("td", {}, h("span", { class: "sk" })))));
   try {
     items = await loadItems();
     paint();

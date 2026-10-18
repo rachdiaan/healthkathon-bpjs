@@ -70,3 +70,13 @@ def test_csv_export(client, admin) -> None:
     assert data[0][2].startswith("'=HYPERLINK(")
     after = admin.execute("SELECT count(*) FROM audit.event WHERE action = 'export.queue_csv'").fetchone()[0]
     assert after - before == 1
+
+
+def test_summary_matches_queue(client, admin) -> None:
+    _login(client, admin)
+    s = client.get("/api/summary").json()
+    assert s["batch"]["id"] == client.get("/api/queue").json()["batch"]["id"]
+    assert s["n"] == sum(s["confidence"].values()) == sum(s["score_hist"])
+    assert s["top_n"] == -(-s["n"] // 10)
+    assert s["rp_top10"]["low"] <= s["rp_top10"]["high"] <= s["rp_top100"]["high"]
+    assert "nik_token" not in str(s)
