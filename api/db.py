@@ -16,8 +16,11 @@ def pool() -> ConnectionPool[psycopg.Connection[DictRow]]:
     global _pool
     if _pool is None:
         url = os.environ["DATABASE_URL"]
+        # Neon menidurkan compute setelah idle dan memutus koneksi (AdminShutdown). check_connection
+        # mengetes koneksi sebelum dipinjam; max_idle menutup koneksi diam sebelum diputus server.
         _pool = ConnectionPool(url, connection_class=psycopg.Connection[DictRow], min_size=1, max_size=int(os.environ.get("PAYRAY_POOL_MAX", "8")),
-                               kwargs={"row_factory": dict_row}, open=True, timeout=10)
+                               kwargs={"row_factory": dict_row}, open=True, timeout=10,
+                               check=ConnectionPool.check_connection, max_idle=240)
     return _pool
 
 
